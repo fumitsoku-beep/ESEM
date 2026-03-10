@@ -10,12 +10,18 @@ from .data import (
 )
 from .efa import (
     EFAConfig,
+    EFADiagnosticsConfig,
+    EFADiagnosticsResult,
     EFAResult,
+    FactorSelectionConfig,
+    FactorSelectionResult,
     fit_efa,
     list_extraction_methods,
     list_rotation_methods,
     register_extraction_method,
     register_rotation_method,
+    run_efa_diagnostics,
+    suggest_n_factors,
 )
 from .fit_indices import compute_basic_fit_indices
 from .invariance import InvarianceResult, test_measurement_invariance
@@ -27,10 +33,14 @@ __all__ = [
     "__version__",
     "compute_basic_fit_indices",
     "EFAConfig",
+    "EFADiagnosticsConfig",
+    "EFADiagnosticsResult",
     "EFAResult",
     "ESEMBlockSpec",
     "ESEMSpec",
     "esem_spec_from_dict",
+    "FactorSelectionConfig",
+    "FactorSelectionResult",
     "fit_efa",
     "InvarianceResult",
     "list_extraction_methods",
@@ -39,6 +49,7 @@ __all__ = [
     "RotationSpec",
     "register_extraction_method",
     "register_rotation_method",
+    "run_efa_diagnostics",
     "SEMModel",
     "SEMResult",
     "parse_model",
@@ -46,5 +57,6 @@ __all__ = [
     "SpecValidationError",
     "test_measurement_invariance",
     "to_markdown",
+    "suggest_n_factors",
     "validate_esem_spec",
 ]

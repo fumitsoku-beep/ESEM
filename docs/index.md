@@ -16,13 +16,17 @@ This is the initial documentation placeholder for `psysem`.
 
 ![EFA flow](assets/images/flow-efa-current.zh-CN.png)
 
+## EFA Implementation Docs
+
+- [EFA Phase 1 Implementation (ZH)](efa-phase1-implementation.zh-CN.md)
+
 ## Current scope
 
 - Package skeleton
 - Public API stubs
 - Smoke tests and CI setup
 - `psysem.data` module for ESEM spec/data validation
-- Initial `psysem.efa` module with extensible method registry
+- `psysem.efa` Phase 1: diagnostics (KMO/Bartlett) and factor-count suggestion (PA/MAP/Scree/Kaiser)
 
 ## Next milestones
 

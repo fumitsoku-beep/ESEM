@@ -16,7 +16,7 @@
 | 模块 | 状态 | 说明 |
 | --- | --- | --- |
 | `psysem.data` | 可用 | `spec` 解析 + 规则校验 + 与 `DataFrame` 对齐校验 |
-| `psysem.efa` | 可用（初版） | `PAF/PCA` 提取、`varimax/none` 旋转、方法注册机制 |
+| `psysem.efa` | 可用（Phase 1） | `PAF/PCA` 提取、`varimax/none`、KMO/Bartlett、自动因子数建议（PA/MAP/Scree/Kaiser） |
 | `SEMModel` | 占位接口 | 已有 `fit` 入口，完整 SEM/ESEM 估计器尚未接入 |
 | `psysem.esem_spec` | 兼容层 | 旧导入路径，内部已转发到 `psysem.data` |
 
@@ -144,6 +144,38 @@ print(result.loadings)
 print(result.explained_variance)
 ```
 
+### 4) EFA 诊断与自动建议因子数（Phase 1）
+
+```python
+import pandas as pd
+from psysem import (
+    EFADiagnosticsConfig,
+    FactorSelectionConfig,
+    run_efa_diagnostics,
+    suggest_n_factors,
+)
+
+data = pd.read_csv("examples/data/efa_demo_input.csv")
+items = tuple(data.columns)
+
+diag = run_efa_diagnostics(data, EFADiagnosticsConfig(items=items))
+selection = suggest_n_factors(
+    data,
+    FactorSelectionConfig(
+        items=items,
+        n_min=1,
+        n_max=4,
+        pa_iter=200,
+        random_state=42,
+    ),
+)
+
+print(diag.kmo_total, diag.kmo_label)
+print(diag.bartlett_chi2, diag.bartlett_df, diag.bartlett_p)
+print(selection.suggestions_by_method)
+print(selection.consensus_n_factors)
+```
+
 ---
 
 ## ESEM 输入契约（当前实现）
@@ -209,6 +241,29 @@ print(result.explained_variance)
 | `max_iter` | `int` | `200` | 迭代上限（如 PAF） |
 | `tol` | `float` | `1e-6` | 收敛阈值 |
 | `min_uniqueness` | `float` | `0.005` | 唯一性下界 |
+
+`EFADiagnosticsConfig` 主要参数：
+
+| 参数 | 类型 | 默认值 | 说明 |
+| --- | --- | --- | --- |
+| `items` | `tuple[str, ...]` | - | 用于诊断的题项列 |
+| `dropna` | `bool` | `True` | 是否在诊断前删除缺失行 |
+| `min_sample_ratio` | `float` | `5.0` | 最低样本比阈值（`n_obs / n_items`） |
+
+`FactorSelectionConfig` 主要参数：
+
+| 参数 | 类型 | 默认值 | 说明 |
+| --- | --- | --- | --- |
+| `items` | `tuple[str, ...]` | - | 用于因子数建议的题项列 |
+| `n_min` | `int` | `1` | 搜索最小因子数 |
+| `n_max` | `int \| None` | `None` | 搜索最大因子数（默认 `n_items - 1`） |
+| `pa_iter` | `int` | `500` | Parallel Analysis 重采样次数 |
+| `pa_percentile` | `float` | `0.95` | PA 分位阈值 |
+| `random_state` | `int \| None` | `None` | 随机种子 |
+| `enable_pa` | `bool` | `True` | 启用 PA |
+| `enable_map` | `bool` | `True` | 启用 MAP |
+| `enable_kaiser` | `bool` | `True` | 启用 Kaiser |
+| `enable_scree` | `bool` | `True` | 启用 Scree 拐点建议 |
 
 可注册自定义方法：
 
@@ -281,6 +336,10 @@ from psysem.data import esem_spec_from_dict, validate_esem_spec
 2. `sem_structural`：更严格结构语法与参数估计
 3. 扩展 EFA/ESEM 的提取和旋转方法（插件化管理）
 4. 报告层增强（fit 指标、参数表、导出）
+
+EFA 分阶段实施文档（详细步骤）：
+
+- [docs/efa-phase1-implementation.zh-CN.md](docs/efa-phase1-implementation.zh-CN.md)
 
 ---
 
