@@ -17,6 +17,10 @@ htmlcov/
 # Tool caches
 .mypy_cache/
 .ruff_cache/
+.tmp/
+.tmp_*/
+.piptmp/
+pytest-cache-files-*/
 
 # IDE / OS files
 .idea/
