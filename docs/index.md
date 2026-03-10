@@ -2,15 +2,31 @@
 
 This is the initial documentation placeholder for `psysem`.
 
+## Current Flow Diagrams
+
+### Overall module flow
+
+![Overall flow](assets/images/flow-overview-current.zh-CN.png)
+
+### `data` module flow
+
+![Data validation flow](assets/images/flow-data-validation.zh-CN.png)
+
+### `efa` module flow
+
+![EFA flow](assets/images/flow-efa-current.zh-CN.png)
+
 ## Current scope
 
 - Package skeleton
 - Public API stubs
 - Smoke tests and CI setup
+- `psysem.data` module for ESEM spec/data validation
+- Initial `psysem.efa` module with extensible method registry
 
 ## Next milestones
 
-- SEM model syntax parser
-- Estimation routines
-- Fit indices and diagnostics
+- ESEM measurement-layer assembly from block-level models
+- Structural SEM layer over measurement model
+- Expanded rotations and extraction methods for EFA
 - Psychology-focused reporting helpers
