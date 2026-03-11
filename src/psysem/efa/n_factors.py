@@ -148,6 +148,13 @@ def _parallel_analysis_thresholds(
 
 
 def _map_values(corr: np.ndarray, *, n_max: int) -> np.ndarray:
+    """Compute Velicer MAP curve using partial-correlation residuals.
+
+    For each component count ``k``:
+    1. subtract reproduced correlation from the observed matrix
+    2. standardize residual matrix into a partial-correlation-like form
+    3. compute mean squared off-diagonal value
+    """
     eigvals, eigvecs = np.linalg.eigh(corr)
     order = np.argsort(eigvals)[::-1]
     eigvals = np.clip(eigvals[order], 0.0, None)
@@ -158,13 +165,13 @@ def _map_values(corr: np.ndarray, *, n_max: int) -> np.ndarray:
 
     for k in range(0, n_max + 1):
         if k == 0:
-            reproduced = np.zeros_like(corr)
+            partial = corr.copy()
         else:
             loadings = eigvecs[:, :k] * np.sqrt(eigvals[:k])
-            reproduced = loadings @ loadings.T
-        residual = corr - reproduced
-        np.fill_diagonal(residual, 0.0)
-        off_diag = residual[upper]
+            residual = corr - (loadings @ loadings.T)
+            partial = _residual_to_partial_like(residual)
+        np.fill_diagonal(partial, 0.0)
+        off_diag = partial[upper]
         map_curve[k] = float(np.mean(off_diag * off_diag))
     return map_curve
 
@@ -213,3 +220,18 @@ def _stabilize_correlation(corr: np.ndarray) -> np.ndarray:
     corr = (corr + corr.T) / 2.0
     np.fill_diagonal(corr, 1.0)
     return corr
+
+
+def _residual_to_partial_like(residual: np.ndarray) -> np.ndarray:
+    """Normalize residual covariance into partial-correlation scale."""
+    residual = np.nan_to_num(residual, nan=0.0, posinf=0.0, neginf=0.0)
+    residual = (residual + residual.T) / 2.0
+    diag = np.clip(np.diag(residual), 1e-12, None)
+    scale = np.sqrt(np.outer(diag, diag))
+    partial = np.divide(
+        residual,
+        scale,
+        out=np.zeros_like(residual),
+        where=scale > 0,
+    )
+    return np.clip(partial, -1.0, 1.0)
