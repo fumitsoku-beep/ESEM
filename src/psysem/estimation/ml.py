@@ -134,8 +134,15 @@ def build_implied_covariance(
     )
 
     theta_df = measurement_design.theta_matrix.loc[list(observed), list(observed)]
-    theta_array = _resolve_matrix(theta_df, parameter_index=None, vector_by_index=vector_by_index, nan_default=1.0)
+    theta_index_df = measurement_design.theta_parameter_index.loc[list(observed), list(observed)]
+    theta_array = _resolve_matrix(
+        theta_df,
+        parameter_index=theta_index_df,
+        vector_by_index=vector_by_index,
+        nan_default=1.0,
+    )
     theta_array = np.diag(np.diag(theta_array))
+    theta_array = np.diag(np.maximum(np.diag(theta_array), 1e-6))
 
     phi_array, _ = _build_latent_covariance(
         latent_order=latent_order,
@@ -473,4 +480,3 @@ def _ensure_positive_definite(
     rebuilt = (eigenvectors * adjusted) @ eigenvectors.T
     rebuilt = (rebuilt + rebuilt.T) / 2.0
     return rebuilt, was_adjusted
-

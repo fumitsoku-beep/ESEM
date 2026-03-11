@@ -30,6 +30,7 @@ class MeasurementDesign:
     lambda_matrix: pd.DataFrame
     lambda_parameter_index: pd.DataFrame
     theta_matrix: pd.DataFrame
+    theta_parameter_index: pd.DataFrame
     loading_parameters: tuple[LoadingParameter, ...] = field(default_factory=tuple)
     block_latent_pairs: tuple[tuple[str, str], ...] = field(default_factory=tuple)
     free_loadings: tuple[tuple[str, str], ...] = field(default_factory=tuple)

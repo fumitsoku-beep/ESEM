@@ -24,6 +24,7 @@ def build_measurement_design(
         raise ValueError("No measurement relations (`=~`) found in model.")
 
     parameter_lookup = _parameter_lookup(parameter_table)
+    theta_lookup = _theta_parameter_lookup(parameter_table)
     latent_order: list[str] = []
     latent_seen: set[str] = set()
     observed_order: list[str] = []
@@ -143,8 +144,41 @@ def build_measurement_design(
         index=observed_order,
         columns=observed_order,
     )
+    theta_parameter_index = pd.DataFrame(
+        0,
+        index=observed_order,
+        columns=observed_order,
+        dtype=int,
+    )
+    theta_next_index = _infer_next_parameter_index(parameter_table, default=fallback_next_index)
     for observed in observed_order:
-        theta_matrix.loc[observed, observed] = np.nan
+        theta_meta = theta_lookup.get(observed)
+        if theta_meta is None:
+            theta_matrix.loc[observed, observed] = np.nan
+            theta_parameter_index.loc[observed, observed] = theta_next_index
+            theta_next_index += 1
+            continue
+
+        (
+            is_free,
+            _parameter_name,
+            parameter_index,
+            _vector_position,
+            fixed_value,
+        ) = theta_meta
+        if is_free:
+            if parameter_index is None:
+                raise ValueError(
+                    f"Free Theta parameter for observed `{observed}` has no `parameter_index`."
+                )
+            theta_matrix.loc[observed, observed] = np.nan
+            theta_parameter_index.loc[observed, observed] = parameter_index
+        else:
+            if fixed_value is None:
+                raise ValueError(
+                    f"Fixed Theta parameter for observed `{observed}` has no fixed value."
+                )
+            theta_matrix.loc[observed, observed] = float(fixed_value)
 
     warnings: list[str] = []
     for latent in latent_order:
@@ -173,6 +207,7 @@ def build_measurement_design(
         lambda_matrix=lambda_matrix,
         lambda_parameter_index=lambda_parameter_index,
         theta_matrix=theta_matrix,
+        theta_parameter_index=theta_parameter_index,
         loading_parameters=tuple(loading_parameters),
         block_latent_pairs=tuple(block_latent_pairs),
         free_loadings=tuple(free_loadings),
@@ -227,6 +262,49 @@ def _fallback_parameter_meta(
     index = next_parameter_index
     parameter_name = f"p{index}"
     return True, parameter_name, index, index - 1, None, next_parameter_index + 1
+
+
+def _theta_parameter_lookup(
+    parameter_table: tuple[dict[str, Any], ...] | None,
+) -> dict[str, tuple[bool, str | None, int | None, int | None, float | None]]:
+    if parameter_table is None:
+        return {}
+    lookup: dict[str, tuple[bool, str | None, int | None, int | None, float | None]] = {}
+    for row in parameter_table:
+        operator = row.get("operator")
+        lhs = row.get("lhs")
+        rhs = row.get("rhs")
+        if operator != "~~":
+            continue
+        if not isinstance(lhs, str) or not isinstance(rhs, str) or lhs != rhs:
+            continue
+        if lhs in lookup:
+            raise ValueError(f"Duplicate Theta parameter row found for observed `{lhs}`.")
+        fixed_raw = row["fixed_value"]
+        vector_position = row.get("vector_position")
+        lookup[lhs] = (
+            bool(row["is_free"]),
+            row["parameter"] if isinstance(row["parameter"], str) else None,
+            int(row["parameter_index"]) if isinstance(row["parameter_index"], int) else None,
+            int(vector_position) if isinstance(vector_position, int) else None,
+            float(fixed_raw) if isinstance(fixed_raw, (int, float)) else None,
+        )
+    return lookup
+
+
+def _infer_next_parameter_index(
+    parameter_table: tuple[dict[str, Any], ...] | None,
+    *,
+    default: int,
+) -> int:
+    if parameter_table is None:
+        return default
+    max_index = 0
+    for row in parameter_table:
+        parameter_index = row.get("parameter_index")
+        if isinstance(parameter_index, int):
+            max_index = max(max_index, parameter_index)
+    return max(default, max_index + 1)
 
 
 def _resolve_block_name(latent: str, block_names: tuple[str, ...]) -> str | None:

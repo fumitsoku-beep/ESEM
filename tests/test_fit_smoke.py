@@ -158,14 +158,14 @@ def test_fit_builds_parameter_table_and_parameter_placeholders() -> None:
     )
     syntax = "eta =~ l1*x1 + 1.0*x2 + x3\ny ~ b1*eta + 0.5*x1 + x2\nb1 == l1"
     result = SEMModel(syntax).fit(data)
-    assert len(result.parameter_table) == 6
-    assert len(result.parameters) == 4
+    assert len(result.parameter_table) == 9
+    assert len(result.parameters) == 7
     assert result.parameter_index_map is not None
-    assert result.parameter_index_map.n_free == 4
-    assert set(result.parameters) == {"l1", "b1", "p1", "p2"}
+    assert result.parameter_index_map.n_free == 7
+    assert set(result.parameters) == {"l1", "b1", "p1", "p2", "p3", "p4", "p5"}
     free_rows = [row for row in result.parameter_table if row["is_free"]]
     free_indices = {int(row["parameter_index"]) for row in free_rows}
-    assert free_indices == {1, 2, 3, 4}
+    assert free_indices == {1, 2, 3, 4, 5, 6, 7}
     assert result.measurement_design is not None
     measurement_indices = {
         int(item.parameter_index)
@@ -174,8 +174,11 @@ def test_fit_builds_parameter_table_and_parameter_placeholders() -> None:
     }
     assert measurement_indices == {1, 2}
     assert int(result.measurement_design.lambda_parameter_index.loc["x3", "eta"]) == 2
+    assert int(result.measurement_design.theta_parameter_index.loc["x1", "x1"]) == 5
+    assert int(result.measurement_design.theta_parameter_index.loc["x2", "x2"]) == 6
+    assert int(result.measurement_design.theta_parameter_index.loc["x3", "x3"]) == 7
     row_positions = [row["vector_position"] for row in free_rows]
-    assert set(row_positions) == {0, 1, 2, 3}
+    assert set(row_positions) == {0, 1, 2, 3, 4, 5, 6}
     fixed_rows = [row for row in result.parameter_table if row["fixed_value"] is not None]
     assert len(fixed_rows) == 2
     assert any(row["fixed_value"] == pytest.approx(1.0) for row in fixed_rows)
@@ -211,7 +214,8 @@ def test_fit_uses_shared_parameter_index_for_repeated_label() -> None:
     assert len(a_rows) == 2
     assert int(a_rows[0]["parameter_index"]) == int(a_rows[1]["parameter_index"])
     assert int(a_rows[0]["vector_position"]) == int(a_rows[1]["vector_position"])
-    assert set(result.parameters) == {"a", "p1"}
+    assert {"a", "p1"}.issubset(set(result.parameters))
+    assert len(result.parameters) == 5
 
 
 def test_fit_with_spec_multiblock_builds_ordered_block_latent_pairs() -> None:
@@ -252,14 +256,14 @@ def test_fit_attaches_structural_design_and_summary_markdown_show_it() -> None:
     assert len(result.structural_design.path_table) == 2
     assert int(result.structural_design.gamma_parameter_index.loc["eta2", "eta1"]) == 5
     assert int(result.structural_design.gamma_parameter_index.loc["eta2", "z1"]) == 6
-    assert int(result.structural_design.psi_parameter_index.loc["eta2", "eta2"]) == 7
+    assert int(result.structural_design.psi_parameter_index.loc["eta2", "eta2"]) == 13
     psi_rows = [
         row
         for row in result.parameter_table
         if row["operator"] == "~~" and row["lhs"] == "eta2" and row["rhs"] == "eta2"
     ]
     assert len(psi_rows) == 1
-    assert int(psi_rows[0]["parameter_index"]) == 7
+    assert int(psi_rows[0]["parameter_index"]) == 13
     assert result.optimization_info["n_structural_disturbance_parameters"] == 1
     summary = result.summary()
     report = to_markdown(result)

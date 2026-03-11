@@ -17,6 +17,9 @@ def test_build_measurement_design_smoke() -> None:
     assert int(design.lambda_parameter_index.loc["x2", "eta"]) == 1
     assert int(design.lambda_parameter_index.loc["x3", "eta"]) == 2
     assert design.theta_matrix.shape == (3, 3)
+    assert int(design.theta_parameter_index.loc["x1", "x1"]) == 3
+    assert int(design.theta_parameter_index.loc["x2", "x2"]) == 4
+    assert int(design.theta_parameter_index.loc["x3", "x3"]) == 5
     assert len(design.loading_parameters) == 3
     assert design.loading_parameters[0].is_free is False
     assert design.loading_parameters[1].is_free is True
@@ -73,6 +76,42 @@ def test_build_measurement_design_with_parameter_table_uses_given_indices() -> N
             "vector_position": 2,
             "fixed_value": None,
         },
+        {
+            "relation_index": 2,
+            "term_index": 1,
+            "lhs": "x1",
+            "operator": "~~",
+            "rhs": "x1",
+            "is_free": True,
+            "parameter": "th1",
+            "parameter_index": 8,
+            "vector_position": 3,
+            "fixed_value": None,
+        },
+        {
+            "relation_index": 3,
+            "term_index": 1,
+            "lhs": "x2",
+            "operator": "~~",
+            "rhs": "x2",
+            "is_free": True,
+            "parameter": "th2",
+            "parameter_index": 9,
+            "vector_position": 4,
+            "fixed_value": None,
+        },
+        {
+            "relation_index": 4,
+            "term_index": 1,
+            "lhs": "x3",
+            "operator": "~~",
+            "rhs": "x3",
+            "is_free": True,
+            "parameter": "th3",
+            "parameter_index": 10,
+            "vector_position": 5,
+            "fixed_value": None,
+        },
     )
     design = build_measurement_design(spec, parameter_table=parameter_table)
     indices = [item.parameter_index for item in design.loading_parameters]
@@ -83,6 +122,9 @@ def test_build_measurement_design_with_parameter_table_uses_given_indices() -> N
     assert int(design.lambda_parameter_index.loc["x1", "eta"]) == 5
     assert int(design.lambda_parameter_index.loc["x2", "eta"]) == 6
     assert int(design.lambda_parameter_index.loc["x3", "eta"]) == 7
+    assert int(design.theta_parameter_index.loc["x1", "x1"]) == 8
+    assert int(design.theta_parameter_index.loc["x2", "x2"]) == 9
+    assert int(design.theta_parameter_index.loc["x3", "x3"]) == 10
 
 
 def test_build_measurement_design_tracks_block_latent_pairs() -> None:

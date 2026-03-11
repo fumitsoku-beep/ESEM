@@ -205,15 +205,37 @@ def _build_parameter_table(model_spec: ModelSpec) -> tuple[dict[str, Any], ...]:
                 }
             )
 
-    relation_count = len(model_spec.relations)
-    for offset, latent in enumerate(_collect_endogenous_latent_for_disturbance(model_spec), start=1):
+    relation_cursor = len(model_spec.relations)
+    for observed in _collect_measurement_observed_for_residual(model_spec):
         parameter_index = next_parameter_index
         parameter_name = f"p{unnamed_counter}"
         next_parameter_index += 1
         unnamed_counter += 1
+        relation_cursor += 1
         rows.append(
             {
-                "relation_index": relation_count + offset,
+                "relation_index": relation_cursor,
+                "term_index": 1,
+                "lhs": observed,
+                "operator": "~~",
+                "rhs": observed,
+                "label": None,
+                "fixed_value": None,
+                "is_free": True,
+                "parameter": parameter_name,
+                "parameter_index": parameter_index,
+            }
+        )
+
+    for latent in _collect_endogenous_latent_for_disturbance(model_spec):
+        parameter_index = next_parameter_index
+        parameter_name = f"p{unnamed_counter}"
+        next_parameter_index += 1
+        unnamed_counter += 1
+        relation_cursor += 1
+        rows.append(
+            {
+                "relation_index": relation_cursor,
                 "term_index": 1,
                 "lhs": latent,
                 "operator": "~~",
@@ -289,6 +311,21 @@ def _collect_endogenous_latent_for_disturbance(model_spec: ModelSpec) -> tuple[s
         seen.add(relation.lhs)
         endogenous_latent.append(relation.lhs)
     return tuple(endogenous_latent)
+
+
+def _collect_measurement_observed_for_residual(model_spec: ModelSpec) -> tuple[str, ...]:
+    observed: list[str] = []
+    seen: set[str] = set()
+    for relation in model_spec.relations:
+        if relation.operator != "=~":
+            continue
+        for term in relation.terms:
+            name = term.variable
+            if name in seen:
+                continue
+            seen.add(name)
+            observed.append(name)
+    return tuple(observed)
 
 
 def _minimum_ml_n_obs(measurement_design: MeasurementDesign) -> int:

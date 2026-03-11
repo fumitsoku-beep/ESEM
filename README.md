@@ -17,7 +17,7 @@
 | --- | --- | --- |
 | `psysem.data` | 可用 | `spec` 解析 + 规则校验 + 与 `DataFrame` 对齐校验 |
 | `psysem.efa` | 可用（Phase 3 进行中） | `PAF/PCA`、KMO/Bartlett、PA/MAP/Scree/Kaiser、候选拟合评分与最优因子数选择 + 模块化解释输出 |
-| `SEMModel` | Phase 1 完成基础版 + Phase 2/3 起步 | 结构化解析 + 参数表草稿 + measurement/structural(`Beta/Gamma/Psi`) 矩阵草图 + 全局参数索引映射 + ML implied covariance/优化原型；估计器仍为占位 |
+| `SEMModel` | Phase 1 完成基础版 + Phase 2/3 起步 | 结构化解析 + 参数表草稿 + measurement(`Lambda/Theta`)/structural(`Beta/Gamma/Psi`) 矩阵草图 + 全局参数索引映射 + ML implied covariance/优化原型；估计器仍为占位 |
 | `psysem.esem_spec` | 兼容层 | 旧导入路径，内部已转发到 `psysem.data` |
 
 ---
@@ -605,6 +605,7 @@ src/psysem/
 
 - [x] 新建 `psysem.measurement`，支持单 block CFA/ESEM 的矩阵草图构造（`Lambda`/`Theta`）
 - [x] 支持多 block 组装（`block_latent_pairs` 与统一 `Lambda/Theta`）
+- [x] 输出 `Theta` 参数索引矩阵（观测变量残差方差映射到全局参数索引）
 - [ ] 支持 block 级旋转覆盖（当前仅保留契约入口）
 - [x] 增加基础识别性检查（最少指标数、marker 缺失告警）
 

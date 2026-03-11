@@ -68,6 +68,7 @@ Phase 3 已落地（第四批）：
 7. structural 增加 `Psi`（内生潜变量扰动方差）矩阵与索引映射。  
 8. 新建 `estimation` 模块，落地 `gaussian_ml_discrepancy`、`build_implied_covariance` 与 `optimize_ml_parameters` 原型。  
 9. `SEMModel.fit` 在样本量满足阈值时可自动触发 ML 原型优化并回填参数值。  
+10. measurement 增加 `Theta` 参数索引矩阵，观测残差方差可映射到全局参数向量。  
 
 ---
 

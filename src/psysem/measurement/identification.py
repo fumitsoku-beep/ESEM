@@ -14,6 +14,8 @@ def check_measurement_identification(design: MeasurementDesign) -> tuple[str, ..
         warnings.append(
             f"Observed variables ({n_obs}) are not greater than latent variables ({n_latent})."
         )
+    if design.theta_parameter_index.shape != design.theta_matrix.shape:
+        warnings.append("Theta parameter-index matrix shape mismatch.")
     free_count = sum(1 for item in design.loading_parameters if item.is_free)
     if free_count == 0:
         warnings.append("Measurement design has no free loadings.")
