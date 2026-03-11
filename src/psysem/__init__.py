@@ -32,7 +32,16 @@ from .efa import (
     run_efa_workflow,
     suggest_n_factors,
 )
-from .estimation import MLEstimationContext, build_ml_context, gaussian_ml_discrepancy
+from .estimation import (
+    MLEstimationContext,
+    MLOptimizationResult,
+    build_implied_covariance,
+    build_ml_context,
+    build_start_vector,
+    gaussian_ml_discrepancy,
+    optimize_ml_parameters,
+    parameter_vector_to_named_values,
+)
 from .fit_indices import compute_basic_fit_indices
 from .invariance import InvarianceResult, test_measurement_invariance
 from .measurement import (
@@ -68,7 +77,9 @@ __all__ = [
     "build_structural_design",
     "check_measurement_identification",
     "check_structural_validity",
+    "build_implied_covariance",
     "build_ml_context",
+    "build_start_vector",
     "EFAConfig",
     "EFADiagnosticsConfig",
     "EFADiagnosticsResult",
@@ -94,6 +105,7 @@ __all__ = [
     "LoadingParameter",
     "MeasurementDesign",
     "MLEstimationContext",
+    "MLOptimizationResult",
     "ModelConstraint",
     "ModelRelation",
     "ModelSpec",
@@ -105,6 +117,8 @@ __all__ = [
     "register_rotation_method",
     "run_efa_diagnostics",
     "run_efa_workflow",
+    "optimize_ml_parameters",
+    "parameter_vector_to_named_values",
     "SEMModel",
     "SEMResult",
     "parse_model",

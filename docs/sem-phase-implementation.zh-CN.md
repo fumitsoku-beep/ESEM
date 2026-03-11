@@ -5,7 +5,7 @@
 当前日期：2026-03-11  
 适用分支：`main`
 
-实现状态：Phase 1 已完成基础版；Phase 2 已完成第二批；Phase 3 已落地第三批（`Beta/Gamma/Psi` 草图 + 循环依赖基础检查 + 统一参数索引映射 + ML 目标函数骨架）；估计器仍为占位。
+实现状态：Phase 1 已完成基础版；Phase 2 已完成第二批；Phase 3 已落地第四批（`Beta/Gamma/Psi` 草图 + 循环依赖基础检查 + 统一参数索引映射 + ML implied covariance/优化原型）；估计器仍为占位。
 
 ---
 
@@ -15,7 +15,7 @@
 | --- | --- | --- | --- |
 | Phase 1 | 入口与契约统一 | `ModelSpec` 扩展、`fit(data, spec=...)`、严格语法校验、标准结果字段 | 已完成（基础版） |
 | Phase 2 | 测量层矩阵构建 | measurement block 组装、识别性检查、参数索引 | 进行中（第二批已完成） |
-| Phase 3 | 结构层 + ML 估计闭环 | structural 路径映射、目标函数、优化、SE 与基础 fit 指标 | 进行中（第三批已完成） |
+| Phase 3 | 结构层 + ML 估计闭环 | structural 路径映射、目标函数、优化、SE 与基础 fit 指标 | 进行中（第四批已完成） |
 | Phase 4（可选） | 高级能力与性能优化 | MLR/WLSMV、多组与不变性、bootstrap、报告增强 | 可选 |
 
 ---
@@ -57,7 +57,7 @@ Phase 2 已落地（第二批）：
 3. 支持多 block 组装映射（`block_latent_pairs`）。  
 4. measurement 层加载参数与全局 `parameter_table` 索引已对齐。  
 
-Phase 3 已落地（第三批）：
+Phase 3 已落地（第四批）：
 
 1. 新增 `structural` 模块，支持 structural path table 构建。  
 2. 产出 `Beta/Gamma` 矩阵草图（用于后续估计层输入）。  
@@ -66,7 +66,8 @@ Phase 3 已落地（第三批）：
 5. 新增全局 `parameter_index_map`（`parameter_index -> vector_position`）。  
 6. measurement/structural 均回传统一参数索引矩阵（供估计层直接取值）。  
 7. structural 增加 `Psi`（内生潜变量扰动方差）矩阵与索引映射。  
-8. 新建 `estimation` 模块，落地 `gaussian_ml_discrepancy` 与 `build_ml_context` 骨架。  
+8. 新建 `estimation` 模块，落地 `gaussian_ml_discrepancy`、`build_implied_covariance` 与 `optimize_ml_parameters` 原型。  
+9. `SEMModel.fit` 在样本量满足阈值时可自动触发 ML 原型优化并回填参数值。  
 
 ---
 

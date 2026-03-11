@@ -2,14 +2,16 @@ from __future__ import annotations
 
 from typing import Any
 
+import math
+
 from .data import ESEMSpec
-from .estimation import build_ml_context
+from .estimation import build_ml_context, optimize_ml_parameters
 from .model import ModelSpec, parse_model
 from .model import model_spec_from_esem_spec
 from .measurement import MeasurementDesign, build_measurement_design, check_measurement_identification
 from .parameter_index import ParameterIndexMap, build_parameter_index_map
-from .structural import StructuralDesign, build_structural_design, check_structural_validity
 from .result import SEMResult
+from .structural import StructuralDesign, build_structural_design, check_structural_validity
 
 
 class SEMModel:
@@ -42,6 +44,7 @@ class SEMModel:
         parameters = _build_parameters(parameter_index_map)
         measurement_design = _try_build_measurement_design(model_spec, parameter_table)
         structural_design = _try_build_structural_design(model_spec, parameter_table)
+        converged = True
         warnings: list[str] = []
         if measurement_design is not None:
             warnings.extend(check_measurement_identification(measurement_design))
@@ -77,9 +80,48 @@ class SEMModel:
                 if ml_context.objective_at_sample_cov is not None
                 else float("nan")
             )
+            optimization_info["ml_optimized"] = False
+
+            should_optimize_ml = (
+                measurement_design is not None
+                and parameter_index_map.n_free > 0
+                and n_obs >= _minimum_ml_n_obs(measurement_design)
+            )
+            if should_optimize_ml and measurement_design is not None:
+                ml_optimization = optimize_ml_parameters(
+                    data,
+                    measurement_design=measurement_design,
+                    structural_design=structural_design,
+                    parameter_index_map=parameter_index_map,
+                    parameter_table=parameter_table,
+                )
+                warnings.extend(ml_optimization.warnings)
+                optimization_info["ml_optimized"] = True
+                optimization_info["ml_optimization_success"] = ml_optimization.success
+                optimization_info["status"] = ml_optimization.status
+                optimization_info["n_iter"] = ml_optimization.n_iter
+                optimization_info["objective"] = (
+                    ml_optimization.objective
+                    if ml_optimization.objective is not None and math.isfinite(ml_optimization.objective)
+                    else float("nan")
+                )
+                optimization_info["ml_n_optimized_observed"] = len(ml_optimization.observed_variables)
+                if ml_optimization.parameter_values:
+                    parameters = {
+                        name: ml_optimization.parameter_values.get(name, value)
+                        for name, value in parameters.items()
+                    }
+                converged = ml_optimization.success
+            elif measurement_design is None:
+                warnings.append("ML optimization skipped: measurement design is required in prototype.")
+            elif n_obs < _minimum_ml_n_obs(measurement_design):
+                warnings.append(
+                    "ML optimization skipped: sample size below prototype threshold "
+                    f"(n={n_obs}, required>={_minimum_ml_n_obs(measurement_design)})."
+                )
 
         return SEMResult(
-            converged=True,
+            converged=converged,
             n_obs=n_obs,
             parameters=parameters,
             fit_indices={},
@@ -247,3 +289,7 @@ def _collect_endogenous_latent_for_disturbance(model_spec: ModelSpec) -> tuple[s
         seen.add(relation.lhs)
         endogenous_latent.append(relation.lhs)
     return tuple(endogenous_latent)
+
+
+def _minimum_ml_n_obs(measurement_design: MeasurementDesign) -> int:
+    return max(20, len(measurement_design.observed_variables) * 3)
