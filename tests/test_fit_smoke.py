@@ -185,6 +185,7 @@ def test_fit_attaches_measurement_design() -> None:
     assert result.measurement_design is not None
     assert result.measurement_design.lambda_matrix.shape == (3, 1)
     assert any("n_measurement_latent" == key for key in result.optimization_info)
+    assert result.structural_design is None
 
 
 def test_fit_uses_shared_parameter_index_for_repeated_label() -> None:
@@ -215,6 +216,34 @@ def test_fit_with_spec_multiblock_builds_ordered_block_latent_pairs() -> None:
     )
     assert result.optimization_info["n_measurement_latent"] == 2
     assert result.optimization_info["n_measurement_observed"] == 6
+    assert result.structural_design is not None
+    assert result.optimization_info["n_structural_paths"] == 2
+
+
+def test_fit_attaches_structural_design_and_summary_markdown_show_it() -> None:
+    data = pd.DataFrame(
+        {
+            "x1": [1.0, 2.0, 3.0],
+            "x2": [1.5, 2.5, 3.5],
+            "x3": [0.8, 1.8, 2.8],
+            "y1": [1.2, 2.2, 3.2],
+            "y2": [1.1, 2.1, 3.1],
+            "y3": [1.3, 2.3, 3.3],
+            "z1": [0.6, 1.6, 2.6],
+        }
+    )
+    syntax = (
+        "eta1 =~ 1*x1 + x2 + x3\n"
+        "eta2 =~ 1*y1 + y2 + y3\n"
+        "eta2 ~ eta1 + z1"
+    )
+    result = SEMModel(syntax).fit(data)
+    assert result.structural_design is not None
+    assert len(result.structural_design.path_table) == 2
+    summary = result.summary()
+    report = to_markdown(result)
+    assert "Structural design:" in summary
+    assert "Structural design:" in report
 
 
 def _esem_payload() -> dict[str, object]:

@@ -35,7 +35,7 @@ This is the initial documentation placeholder for `psysem`.
 - `psysem.efa` Phase 2 (basic): candidate fitting, model scoring, and best factor-count selection
 - `psysem.efa` Phase 3 (in progress): modular interpretation output (`item_table`, `factor_table`, `residual_top_pairs`)
 - Expanded EFA test suite: validation, edge cases, reproducibility, and workflow integration
-- `psysem` SEM Phase 1 complete (base) + Phase 2 (batch 2): multi-block measurement draft, identification checks, and parameter-index alignment
+- `psysem` SEM Phase 3 started: structural path mapping (`Beta/Gamma` draft), cycle checks, and fit-result integration
 
 ## Next milestones
 

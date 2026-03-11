@@ -6,6 +6,7 @@ from .data import ESEMSpec
 from .model import ModelSpec, parse_model
 from .model import model_spec_from_esem_spec
 from .measurement import MeasurementDesign, build_measurement_design, check_measurement_identification
+from .structural import StructuralDesign, build_structural_design, check_structural_validity
 from .result import SEMResult
 
 
@@ -36,9 +37,12 @@ class SEMModel:
         parameter_table = _build_parameter_table(model_spec)
         parameters = _build_parameters(parameter_table)
         measurement_design = _try_build_measurement_design(model_spec, parameter_table)
+        structural_design = _try_build_structural_design(model_spec, parameter_table)
         warnings: list[str] = []
         if measurement_design is not None:
             warnings.extend(check_measurement_identification(measurement_design))
+        if structural_design is not None:
+            warnings.extend(check_structural_validity(structural_design))
 
         optimization_info: dict[str, Any] = {
             "status": "placeholder",
@@ -50,6 +54,11 @@ class SEMModel:
         if measurement_design is not None:
             optimization_info["n_measurement_latent"] = len(measurement_design.latent_variables)
             optimization_info["n_measurement_observed"] = len(measurement_design.observed_variables)
+        if structural_design is not None:
+            optimization_info["n_structural_paths"] = len(structural_design.path_table)
+            optimization_info["n_structural_endogenous_latent"] = len(
+                structural_design.endogenous_latent_variables
+            )
 
         return SEMResult(
             converged=True,
@@ -62,6 +71,7 @@ class SEMModel:
             estimator=estimator,
             model_spec=model_spec,
             measurement_design=measurement_design,
+            structural_design=structural_design,
         )
 
     def _resolve_model_spec(self, spec: ESEMSpec | None) -> ModelSpec:
@@ -155,3 +165,13 @@ def _try_build_measurement_design(
     if not has_measurement:
         return None
     return build_measurement_design(model_spec, parameter_table=parameter_table)
+
+
+def _try_build_structural_design(
+    model_spec: ModelSpec,
+    parameter_table: tuple[dict[str, Any], ...],
+) -> StructuralDesign | None:
+    has_structural = any(relation.operator == "~" for relation in model_spec.relations)
+    if not has_structural:
+        return None
+    return build_structural_design(model_spec, parameter_table=parameter_table)

@@ -17,7 +17,7 @@
 | --- | --- | --- |
 | `psysem.data` | 可用 | `spec` 解析 + 规则校验 + 与 `DataFrame` 对齐校验 |
 | `psysem.efa` | 可用（Phase 3 进行中） | `PAF/PCA`、KMO/Bartlett、PA/MAP/Scree/Kaiser、候选拟合评分与最优因子数选择 + 模块化解释输出 |
-| `SEMModel` | Phase 1 完成基础版 + Phase 2 进行中 | 结构化解析 + `fit(data, spec=...)` + 参数表草稿 + measurement 矩阵草图；估计器仍为占位 |
+| `SEMModel` | Phase 1 完成基础版 + Phase 2/3 起步 | 结构化解析 + 参数表草稿 + measurement/structural 矩阵草图；估计器仍为占位 |
 | `psysem.esem_spec` | 兼容层 | 旧导入路径，内部已转发到 `psysem.data` |
 
 ---
@@ -56,7 +56,7 @@ python -m pytest -q
 
 ## EFA 测试与质量门禁（2026-03-11）
 
-当前仓库测试数量：`107`（其中 EFA 相关测试 `67`）。
+当前仓库测试数量：`113`（其中 EFA 相关测试 `67`）。
 
 EFA 已覆盖以下测试层级：
 
@@ -600,8 +600,8 @@ src/psysem/
 
 #### Phase 3: 结构层（Structural）
 
-- [ ] 新建 `psysem.structural`，实现 latent/observed 回归路径映射
-- [ ] 加入结构路径合法性检查（循环依赖、未知变量、重复路径）
+- [x] 新建 `psysem.structural`，实现 latent/observed 回归路径映射（Beta/Gamma 草图）
+- [x] 加入结构路径合法性检查（循环依赖与未知变量的基础检查）
 - [ ] 输出统一参数索引，供估计层直接使用
 
 #### Phase 4: 估计与推断

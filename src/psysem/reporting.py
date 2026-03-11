@@ -17,6 +17,12 @@ def to_markdown(result: SEMResult) -> str:
             f"`{len(result.measurement_design.observed_variables)} observed / "
             f"{len(result.measurement_design.latent_variables)} latent`"
         )
+    if result.structural_design is not None:
+        lines.append(
+            "- Structural design: "
+            f"`{len(result.structural_design.path_table)} paths / "
+            f"{len(result.structural_design.endogenous_latent_variables)} latent endogenous`"
+        )
 
     if result.optimization_info:
         lines.extend(["", "## Optimization"])

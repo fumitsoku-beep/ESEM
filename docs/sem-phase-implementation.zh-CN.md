@@ -5,7 +5,7 @@
 当前日期：2026-03-11  
 适用分支：`main`
 
-实现状态：Phase 1 已完成第二批能力；Phase 2 已启动并落地 measurement 首版（`Lambda`/`Theta` 草图 + 基础识别性检查）；估计器仍为占位。
+实现状态：Phase 1 已完成基础版；Phase 2 已完成第二批；Phase 3 已启动并落地 structural 首版（`Beta/Gamma` 草图 + 循环依赖基础检查）；估计器仍为占位。
 
 ---
 
@@ -15,7 +15,7 @@
 | --- | --- | --- | --- |
 | Phase 1 | 入口与契约统一 | `ModelSpec` 扩展、`fit(data, spec=...)`、严格语法校验、标准结果字段 | 已完成（基础版） |
 | Phase 2 | 测量层矩阵构建 | measurement block 组装、识别性检查、参数索引 | 进行中（第二批已完成） |
-| Phase 3 | 结构层 + ML 估计闭环 | structural 路径映射、目标函数、优化、SE 与基础 fit 指标 | 规划中 |
+| Phase 3 | 结构层 + ML 估计闭环 | structural 路径映射、目标函数、优化、SE 与基础 fit 指标 | 进行中（首批已完成） |
 | Phase 4（可选） | 高级能力与性能优化 | MLR/WLSMV、多组与不变性、bootstrap、报告增强 | 可选 |
 
 ---
@@ -56,6 +56,13 @@ Phase 2 已落地（第二批）：
 2. 增加基础识别性检查（最少指标数、marker 缺失告警）。  
 3. 支持多 block 组装映射（`block_latent_pairs`）。  
 4. measurement 层加载参数与全局 `parameter_table` 索引已对齐。  
+
+Phase 3 已落地（首批）：
+
+1. 新增 `structural` 模块，支持 structural path table 构建。  
+2. 产出 `Beta/Gamma` 矩阵草图（用于后续估计层输入）。  
+3. 增加循环依赖基础检查（latent cycle）。  
+4. `SEMModel.fit` 已接入 structural 设计并回传到 `SEMResult`。  
 
 ---
 

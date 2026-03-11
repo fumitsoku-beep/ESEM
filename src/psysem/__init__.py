@@ -51,12 +51,20 @@ from .model import (
 )
 from .reporting import to_markdown
 from .result import SEMResult
+from .structural import (
+    StructuralDesign,
+    StructuralPath,
+    build_structural_design,
+    check_structural_validity,
+)
 
 __all__ = [
     "__version__",
     "compute_basic_fit_indices",
     "build_measurement_design",
+    "build_structural_design",
     "check_measurement_identification",
+    "check_structural_validity",
     "EFAConfig",
     "EFADiagnosticsConfig",
     "EFADiagnosticsResult",
@@ -96,6 +104,8 @@ __all__ = [
     "parse_model",
     "sem",
     "SpecValidationError",
+    "StructuralDesign",
+    "StructuralPath",
     "test_measurement_invariance",
     "to_markdown",
     "suggest_n_factors",

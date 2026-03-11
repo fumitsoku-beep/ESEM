@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from .measurement import MeasurementDesign
     from .model import ModelSpec
+    from .structural import StructuralDesign
 
 
 @dataclass
@@ -21,6 +22,7 @@ class SEMResult:
     estimator: str | None = None
     model_spec: ModelSpec | None = None
     measurement_design: MeasurementDesign | None = None
+    structural_design: StructuralDesign | None = None
 
     def summary(self) -> str:
         lines = [
@@ -38,6 +40,12 @@ class SEMResult:
                 "Measurement design: "
                 f"{len(self.measurement_design.observed_variables)} observed / "
                 f"{len(self.measurement_design.latent_variables)} latent"
+            )
+        if self.structural_design is not None:
+            lines.append(
+                "Structural design: "
+                f"{len(self.structural_design.path_table)} paths / "
+                f"{len(self.structural_design.endogenous_latent_variables)} latent endogenous"
             )
 
         if self.optimization_info:
