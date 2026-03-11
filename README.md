@@ -533,11 +533,19 @@ EFA 当前阶段进展：
 3. Phase 3：进行中（模块化解释输出 `interpret_efa` + workflow 接入）
 4. Phase 4（可选）：未开始（高级方法与性能优化）
 
+SEM 分阶段实施文档（详细步骤）：
+
+- [docs/sem-phase-implementation.zh-CN.md](docs/sem-phase-implementation.zh-CN.md)
+
 ---
 
 ## SEM 模块拆分思路（TODO）
 
 下面是面向 `SEMModel.fit(...)` 的推荐分层，目标是把“语法、矩阵、优化、统计推断、报告”解耦，便于逐模块迭代和测试。
+
+详细实施步骤见：
+
+- [docs/sem-phase-implementation.zh-CN.md](docs/sem-phase-implementation.zh-CN.md)
 
 ### 1) 模块边界（建议）
 

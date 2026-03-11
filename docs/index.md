@@ -21,6 +21,10 @@ This is the initial documentation placeholder for `psysem`.
 - [EFA Phase 1 Implementation (ZH)](efa-phase1-implementation.zh-CN.md)
 - [EFA Testing and Quality Gate (ZH)](efa-testing.zh-CN.md)
 
+## SEM Planning Docs
+
+- [SEM Phase Implementation (ZH)](sem-phase-implementation.zh-CN.md)
+
 ## Current scope
 
 - Package skeleton
