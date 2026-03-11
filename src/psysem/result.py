@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from .measurement import MeasurementDesign
     from .model import ModelSpec
+    from .parameter_index import ParameterIndexMap
     from .structural import StructuralDesign
 
 
@@ -21,6 +22,7 @@ class SEMResult:
     optimization_info: dict[str, Any] = field(default_factory=dict)
     estimator: str | None = None
     model_spec: ModelSpec | None = None
+    parameter_index_map: ParameterIndexMap | None = None
     measurement_design: MeasurementDesign | None = None
     structural_design: StructuralDesign | None = None
 
@@ -35,6 +37,8 @@ class SEMResult:
         if self.model_spec is not None:
             lines.append(f"Model source: {self.model_spec.source}")
             lines.append(f"Relations: {len(self.model_spec.relations)}")
+        if self.parameter_index_map is not None:
+            lines.append(f"Free parameters: {self.parameter_index_map.n_free}")
         if self.measurement_design is not None:
             lines.append(
                 "Measurement design: "

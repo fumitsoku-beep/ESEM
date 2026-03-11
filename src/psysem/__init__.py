@@ -49,6 +49,7 @@ from .model import (
     model_spec_from_esem_spec,
     parse_model,
 )
+from .parameter_index import ParameterIndexEntry, ParameterIndexMap, build_parameter_index_map
 from .reporting import to_markdown
 from .result import SEMResult
 from .structural import (
@@ -102,6 +103,8 @@ __all__ = [
     "SEMModel",
     "SEMResult",
     "parse_model",
+    "ParameterIndexEntry",
+    "ParameterIndexMap",
     "sem",
     "SpecValidationError",
     "StructuralDesign",
@@ -110,4 +113,5 @@ __all__ = [
     "to_markdown",
     "suggest_n_factors",
     "validate_esem_spec",
+    "build_parameter_index_map",
 ]

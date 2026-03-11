@@ -69,7 +69,14 @@ def build_structural_design(
 
             param_meta = parameter_lookup.get((relation_index, term_index))
             if param_meta is None:
-                is_free, parameter_name, parameter_index, fixed_value, fallback_next_index = (
+                (
+                    is_free,
+                    parameter_name,
+                    parameter_index,
+                    vector_position,
+                    fixed_value,
+                    fallback_next_index,
+                ) = (
                     _fallback_parameter_meta(
                         term=term,
                         fallback_label_index=fallback_label_index,
@@ -77,7 +84,7 @@ def build_structural_design(
                     )
                 )
             else:
-                is_free, parameter_name, parameter_index, fixed_value = param_meta
+                is_free, parameter_name, parameter_index, vector_position, fixed_value = param_meta
 
             path_table.append(
                 StructuralPath(
@@ -88,6 +95,7 @@ def build_structural_design(
                     is_free=is_free,
                     parameter=parameter_name,
                     parameter_index=parameter_index,
+                    vector_position=vector_position,
                     fixed_value=fixed_value,
                     relation_index=relation_index,
                     term_index=term_index,
@@ -96,8 +104,14 @@ def build_structural_design(
 
     exogenous_latent = [name for name in model_spec.latent_variables if name not in endogenous_latent_seen]
     beta_matrix = _build_beta_matrix(endogenous_latent, path_table)
+    beta_parameter_index = _build_beta_parameter_index_matrix(endogenous_latent, path_table)
     gamma_columns = exogenous_latent + observed_predictors
     gamma_matrix = _build_gamma_matrix(endogenous_latent, gamma_columns, path_table)
+    gamma_parameter_index = _build_gamma_parameter_index_matrix(
+        endogenous_latent,
+        gamma_columns,
+        path_table,
+    )
     warnings = _build_structural_warnings(
         path_table=path_table,
         endogenous_latent=endogenous_latent,
@@ -111,7 +125,9 @@ def build_structural_design(
         observed_predictor_variables=tuple(observed_predictors),
         observed_endogenous_variables=tuple(observed_endogenous),
         beta_matrix=beta_matrix,
+        beta_parameter_index=beta_parameter_index,
         gamma_matrix=gamma_matrix,
+        gamma_parameter_index=gamma_parameter_index,
         warnings=tuple(warnings),
     )
 
@@ -161,6 +177,53 @@ def _build_gamma_matrix(
         else:
             gamma.loc[path.target, path.source] = float(path.fixed_value or 0.0)
     return gamma
+
+
+def _build_beta_parameter_index_matrix(
+    endogenous_latent: list[str],
+    path_table: list[StructuralPath],
+) -> pd.DataFrame:
+    beta_index = pd.DataFrame(
+        0,
+        index=endogenous_latent,
+        columns=endogenous_latent,
+        dtype=int,
+    )
+    for path in path_table:
+        if not (path.target_is_latent and path.source_is_latent and path.is_free):
+            continue
+        if path.parameter_index is None:
+            continue
+        if path.target not in beta_index.index:
+            continue
+        if path.source not in beta_index.columns:
+            continue
+        beta_index.loc[path.target, path.source] = path.parameter_index
+    return beta_index
+
+
+def _build_gamma_parameter_index_matrix(
+    endogenous_latent: list[str],
+    gamma_columns: list[str],
+    path_table: list[StructuralPath],
+) -> pd.DataFrame:
+    gamma_index = pd.DataFrame(
+        0,
+        index=endogenous_latent,
+        columns=gamma_columns,
+        dtype=int,
+    )
+    for path in path_table:
+        if not (path.target_is_latent and path.is_free):
+            continue
+        if path.parameter_index is None:
+            continue
+        if path.target not in gamma_index.index:
+            continue
+        if path.source not in gamma_index.columns:
+            continue
+        gamma_index.loc[path.target, path.source] = path.parameter_index
+    return gamma_index
 
 
 def _build_structural_warnings(
@@ -214,17 +277,22 @@ def _has_cycle(edges: list[tuple[str, str]]) -> bool:
 
 def _parameter_lookup(
     parameter_table: tuple[dict[str, Any], ...] | None,
-) -> dict[tuple[int, int], tuple[bool, str | None, int | None, float | None]]:
+) -> dict[tuple[int, int], tuple[bool, str | None, int | None, int | None, float | None]]:
     if parameter_table is None:
         return {}
-    lookup: dict[tuple[int, int], tuple[bool, str | None, int | None, float | None]] = {}
+    lookup: dict[
+        tuple[int, int],
+        tuple[bool, str | None, int | None, int | None, float | None],
+    ] = {}
     for row in parameter_table:
         key = (int(row["relation_index"]), int(row["term_index"]))
         fixed_raw = row["fixed_value"]
+        vector_position = row.get("vector_position")
         lookup[key] = (
             bool(row["is_free"]),
             row["parameter"] if isinstance(row["parameter"], str) else None,
             int(row["parameter_index"]) if isinstance(row["parameter_index"], int) else None,
+            int(vector_position) if isinstance(vector_position, int) else None,
             float(fixed_raw) if isinstance(fixed_raw, (int, float)) else None,
         )
     return lookup
@@ -235,10 +303,10 @@ def _fallback_parameter_meta(
     term: RelationTerm,
     fallback_label_index: dict[str, int],
     next_parameter_index: int,
-) -> tuple[bool, str | None, int | None, float | None, int]:
+) -> tuple[bool, str | None, int | None, int | None, float | None, int]:
     fixed_value = term.coefficient
     if fixed_value is not None:
-        return False, None, None, float(fixed_value), next_parameter_index
+        return False, None, None, None, float(fixed_value), next_parameter_index
 
     if term.label is not None:
         index = fallback_label_index.get(term.label)
@@ -246,7 +314,7 @@ def _fallback_parameter_meta(
             index = next_parameter_index
             fallback_label_index[term.label] = index
             next_parameter_index += 1
-        return True, term.label, index, None, next_parameter_index
+        return True, term.label, index, index - 1, None, next_parameter_index
 
     index = next_parameter_index
-    return True, f"p{index}", index, None, next_parameter_index + 1
+    return True, f"p{index}", index, index - 1, None, next_parameter_index + 1

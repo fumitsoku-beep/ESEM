@@ -14,6 +14,7 @@ class LoadingParameter:
     is_free: bool
     parameter: str | None
     parameter_index: int | None
+    vector_position: int | None
     fixed_value: float | None
     relation_index: int
     term_index: int
@@ -27,6 +28,7 @@ class MeasurementDesign:
     observed_variables: tuple[str, ...]
     latent_variables: tuple[str, ...]
     lambda_matrix: pd.DataFrame
+    lambda_parameter_index: pd.DataFrame
     theta_matrix: pd.DataFrame
     loading_parameters: tuple[LoadingParameter, ...] = field(default_factory=tuple)
     block_latent_pairs: tuple[tuple[str, str], ...] = field(default_factory=tuple)

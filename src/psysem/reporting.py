@@ -11,6 +11,8 @@ def to_markdown(result: SEMResult) -> str:
     if result.model_spec is not None:
         lines.append(f"- Model source: `{result.model_spec.source}`")
         lines.append(f"- Relations: `{len(result.model_spec.relations)}`")
+    if result.parameter_index_map is not None:
+        lines.append(f"- Free parameters: `{result.parameter_index_map.n_free}`")
     if result.measurement_design is not None:
         lines.append(
             "- Measurement design: "

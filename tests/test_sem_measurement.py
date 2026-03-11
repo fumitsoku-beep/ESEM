@@ -13,10 +13,15 @@ def test_build_measurement_design_smoke() -> None:
     assert design.lambda_matrix.loc["x1", "eta"] == pytest.approx(1.0)
     assert pd.isna(design.lambda_matrix.loc["x2", "eta"])
     assert pd.isna(design.lambda_matrix.loc["x3", "eta"])
+    assert int(design.lambda_parameter_index.loc["x1", "eta"]) == 0
+    assert int(design.lambda_parameter_index.loc["x2", "eta"]) == 1
+    assert int(design.lambda_parameter_index.loc["x3", "eta"]) == 2
     assert design.theta_matrix.shape == (3, 3)
     assert len(design.loading_parameters) == 3
     assert design.loading_parameters[0].is_free is False
     assert design.loading_parameters[1].is_free is True
+    assert design.loading_parameters[0].vector_position is None
+    assert design.loading_parameters[1].vector_position == 0
 
 
 def test_build_measurement_design_rejects_no_measurement_relations() -> None:
@@ -47,6 +52,7 @@ def test_build_measurement_design_with_parameter_table_uses_given_indices() -> N
             "is_free": True,
             "parameter": "a",
             "parameter_index": 5,
+            "vector_position": 0,
             "fixed_value": None,
         },
         {
@@ -55,6 +61,7 @@ def test_build_measurement_design_with_parameter_table_uses_given_indices() -> N
             "is_free": True,
             "parameter": "p1",
             "parameter_index": 6,
+            "vector_position": 1,
             "fixed_value": None,
         },
         {
@@ -63,13 +70,19 @@ def test_build_measurement_design_with_parameter_table_uses_given_indices() -> N
             "is_free": True,
             "parameter": "p2",
             "parameter_index": 7,
+            "vector_position": 2,
             "fixed_value": None,
         },
     )
     design = build_measurement_design(spec, parameter_table=parameter_table)
     indices = [item.parameter_index for item in design.loading_parameters]
     assert indices == [5, 6, 7]
+    positions = [item.vector_position for item in design.loading_parameters]
+    assert positions == [0, 1, 2]
     assert all(item.is_free for item in design.loading_parameters)
+    assert int(design.lambda_parameter_index.loc["x1", "eta"]) == 5
+    assert int(design.lambda_parameter_index.loc["x2", "eta"]) == 6
+    assert int(design.lambda_parameter_index.loc["x3", "eta"]) == 7
 
 
 def test_build_measurement_design_tracks_block_latent_pairs() -> None:

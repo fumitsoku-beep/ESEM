@@ -18,6 +18,9 @@ def test_build_structural_design_smoke() -> None:
     assert design.beta_matrix.shape == (1, 1)
     assert pd.isna(design.gamma_matrix.loc["eta2", "eta1"])
     assert pd.isna(design.gamma_matrix.loc["eta2", "z1"])
+    assert int(design.gamma_parameter_index.loc["eta2", "eta1"]) == 1
+    assert int(design.gamma_parameter_index.loc["eta2", "z1"]) == 2
+    assert int(design.beta_parameter_index.loc["eta2", "eta2"]) == 0
 
 
 def test_build_structural_design_warns_cycle() -> None:
@@ -60,6 +63,7 @@ def test_build_structural_design_with_parameter_table_uses_given_indices() -> No
             "is_free": True,
             "parameter": "a",
             "parameter_index": 10,
+            "vector_position": 0,
             "fixed_value": None,
         },
         {
@@ -68,6 +72,7 @@ def test_build_structural_design_with_parameter_table_uses_given_indices() -> No
             "is_free": False,
             "parameter": None,
             "parameter_index": None,
+            "vector_position": None,
             "fixed_value": 0.5,
         },
         {
@@ -76,12 +81,15 @@ def test_build_structural_design_with_parameter_table_uses_given_indices() -> No
             "is_free": True,
             "parameter": "p1",
             "parameter_index": 11,
+            "vector_position": 1,
             "fixed_value": None,
         },
     )
     design = build_structural_design(spec, parameter_table=parameter_table)
     free_indices = [item.parameter_index for item in design.path_table if item.is_free]
     assert free_indices == [10, 11]
+    free_positions = [item.vector_position for item in design.path_table if item.is_free]
+    assert free_positions == [0, 1]
 
 
 def test_check_structural_validity_reports_empty_paths() -> None:

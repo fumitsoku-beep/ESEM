@@ -137,9 +137,11 @@ def test_summary_and_markdown_include_phase1_fields() -> None:
     report = to_markdown(result)
     assert "Estimator: ml" in summary
     assert "Model source: syntax" in summary
+    assert "Free parameters:" in summary
     assert "Optimization:" in summary
     assert "n_free_parameters" in summary
     assert "Estimator: `ml`" in report
+    assert "Free parameters: `1`" in report
     assert "## Optimization" in report
 
 
@@ -156,6 +158,8 @@ def test_fit_builds_parameter_table_and_parameter_placeholders() -> None:
     result = SEMModel(syntax).fit(data)
     assert len(result.parameter_table) == 6
     assert len(result.parameters) == 4
+    assert result.parameter_index_map is not None
+    assert result.parameter_index_map.n_free == 4
     assert set(result.parameters) == {"l1", "b1", "p1", "p2"}
     free_rows = [row for row in result.parameter_table if row["is_free"]]
     free_indices = {int(row["parameter_index"]) for row in free_rows}
@@ -167,6 +171,9 @@ def test_fit_builds_parameter_table_and_parameter_placeholders() -> None:
         if item.parameter_index is not None
     }
     assert measurement_indices == {1, 2}
+    assert int(result.measurement_design.lambda_parameter_index.loc["x3", "eta"]) == 2
+    row_positions = [row["vector_position"] for row in free_rows]
+    assert set(row_positions) == {0, 1, 2, 3}
     fixed_rows = [row for row in result.parameter_table if row["fixed_value"] is not None]
     assert len(fixed_rows) == 2
     assert any(row["fixed_value"] == pytest.approx(1.0) for row in fixed_rows)
@@ -201,6 +208,7 @@ def test_fit_uses_shared_parameter_index_for_repeated_label() -> None:
     a_rows = [row for row in free_rows if row["parameter"] == "a"]
     assert len(a_rows) == 2
     assert int(a_rows[0]["parameter_index"]) == int(a_rows[1]["parameter_index"])
+    assert int(a_rows[0]["vector_position"]) == int(a_rows[1]["vector_position"])
     assert set(result.parameters) == {"a", "p1"}
 
 
@@ -240,6 +248,8 @@ def test_fit_attaches_structural_design_and_summary_markdown_show_it() -> None:
     result = SEMModel(syntax).fit(data)
     assert result.structural_design is not None
     assert len(result.structural_design.path_table) == 2
+    assert int(result.structural_design.gamma_parameter_index.loc["eta2", "eta1"]) == 5
+    assert int(result.structural_design.gamma_parameter_index.loc["eta2", "z1"]) == 6
     summary = result.summary()
     report = to_markdown(result)
     assert "Structural design:" in summary

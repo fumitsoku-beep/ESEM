@@ -6,6 +6,7 @@ from .data import ESEMSpec
 from .model import ModelSpec, parse_model
 from .model import model_spec_from_esem_spec
 from .measurement import MeasurementDesign, build_measurement_design, check_measurement_identification
+from .parameter_index import ParameterIndexMap, build_parameter_index_map
 from .structural import StructuralDesign, build_structural_design, check_structural_validity
 from .result import SEMResult
 
@@ -34,8 +35,10 @@ class SEMModel:
         n_obs = _resolve_n_obs(data)
         model_spec = self._resolve_model_spec(spec)
         estimator = (model_spec.estimator or "ml").lower()
-        parameter_table = _build_parameter_table(model_spec)
-        parameters = _build_parameters(parameter_table)
+        raw_parameter_table = _build_parameter_table(model_spec)
+        parameter_index_map = build_parameter_index_map(raw_parameter_table)
+        parameter_table = _attach_vector_positions(raw_parameter_table, parameter_index_map)
+        parameters = _build_parameters(parameter_index_map)
         measurement_design = _try_build_measurement_design(model_spec, parameter_table)
         structural_design = _try_build_structural_design(model_spec, parameter_table)
         warnings: list[str] = []
@@ -48,7 +51,7 @@ class SEMModel:
             "status": "placeholder",
             "n_iter": 0,
             "objective": float("nan"),
-            "n_free_parameters": len(parameters),
+            "n_free_parameters": parameter_index_map.n_free,
             "n_constraints": len(model_spec.constraints),
         }
         if measurement_design is not None:
@@ -70,6 +73,7 @@ class SEMModel:
             optimization_info=optimization_info,
             estimator=estimator,
             model_spec=model_spec,
+            parameter_index_map=parameter_index_map,
             measurement_design=measurement_design,
             structural_design=structural_design,
         )
@@ -146,15 +150,31 @@ def _build_parameter_table(model_spec: ModelSpec) -> tuple[dict[str, Any], ...]:
     return tuple(rows)
 
 
-def _build_parameters(parameter_table: tuple[dict[str, Any], ...]) -> dict[str, float]:
-    parameters: dict[str, float] = {}
+def _build_parameters(parameter_index_map: ParameterIndexMap) -> dict[str, float]:
+    return {
+        entry.parameter: float("nan")
+        for entry in parameter_index_map.entries
+    }
+
+
+def _attach_vector_positions(
+    parameter_table: tuple[dict[str, Any], ...],
+    parameter_index_map: ParameterIndexMap,
+) -> tuple[dict[str, Any], ...]:
+    index_to_position = parameter_index_map.index_to_position()
+    rows: list[dict[str, Any]] = []
     for row in parameter_table:
-        if not bool(row["is_free"]):
-            continue
-        parameter_name = row["parameter"]
-        if isinstance(parameter_name, str):
-            parameters.setdefault(parameter_name, float("nan"))
-    return parameters
+        row_with_position = dict(row)
+        if bool(row_with_position["is_free"]):
+            parameter_index = row_with_position["parameter_index"]
+            if isinstance(parameter_index, int):
+                row_with_position["vector_position"] = index_to_position.get(parameter_index)
+            else:
+                row_with_position["vector_position"] = None
+        else:
+            row_with_position["vector_position"] = None
+        rows.append(row_with_position)
+    return tuple(rows)
 
 
 def _try_build_measurement_design(

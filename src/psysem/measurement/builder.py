@@ -67,7 +67,14 @@ def build_measurement_design(
             indicator_counts[latent] += 1
             param_meta = parameter_lookup.get((relation_index, term_index))
             if param_meta is None:
-                is_free, parameter_name, parameter_index, fixed_value, fallback_next_index = (
+                (
+                    is_free,
+                    parameter_name,
+                    parameter_index,
+                    vector_position,
+                    fixed_value,
+                    fallback_next_index,
+                ) = (
                     _fallback_parameter_meta(
                         term=term,
                         fallback_label_index=fallback_label_index,
@@ -75,7 +82,7 @@ def build_measurement_design(
                     )
                 )
             else:
-                is_free, parameter_name, parameter_index, fixed_value = param_meta
+                is_free, parameter_name, parameter_index, vector_position, fixed_value = param_meta
                 if term.coefficient is not None and fixed_value is None:
                     raise ValueError(
                         "Parameter table/meta mismatch: fixed loading term has no fixed value."
@@ -98,6 +105,7 @@ def build_measurement_design(
                     is_free=is_free,
                     parameter=parameter_name,
                     parameter_index=parameter_index,
+                    vector_position=vector_position,
                     fixed_value=fixed_value,
                     relation_index=relation_index,
                     term_index=term_index,
@@ -114,10 +122,21 @@ def build_measurement_design(
         index=observed_order,
         columns=latent_order,
     )
+    lambda_parameter_index = pd.DataFrame(
+        0,
+        index=observed_order,
+        columns=latent_order,
+        dtype=int,
+    )
     for observed, latent in free_loadings:
         lambda_matrix.loc[observed, latent] = np.nan
-    for observed, latent, value in fixed_loadings:
-        lambda_matrix.loc[observed, latent] = value
+    for item in loading_parameters:
+        if item.is_free:
+            if item.parameter_index is not None:
+                lambda_parameter_index.loc[item.observed, item.latent] = item.parameter_index
+            continue
+        assert item.fixed_value is not None
+        lambda_matrix.loc[item.observed, item.latent] = item.fixed_value
 
     theta_matrix = pd.DataFrame(
         0.0,
@@ -152,6 +171,7 @@ def build_measurement_design(
         observed_variables=tuple(observed_order),
         latent_variables=tuple(latent_order),
         lambda_matrix=lambda_matrix,
+        lambda_parameter_index=lambda_parameter_index,
         theta_matrix=theta_matrix,
         loading_parameters=tuple(loading_parameters),
         block_latent_pairs=tuple(block_latent_pairs),
@@ -163,19 +183,24 @@ def build_measurement_design(
 
 def _parameter_lookup(
     parameter_table: tuple[dict[str, Any], ...] | None,
-) -> dict[tuple[int, int], tuple[bool, str | None, int | None, float | None]]:
+) -> dict[tuple[int, int], tuple[bool, str | None, int | None, int | None, float | None]]:
     if parameter_table is None:
         return {}
-    lookup: dict[tuple[int, int], tuple[bool, str | None, int | None, float | None]] = {}
+    lookup: dict[
+        tuple[int, int],
+        tuple[bool, str | None, int | None, int | None, float | None],
+    ] = {}
     for row in parameter_table:
         relation_index = int(row["relation_index"])
         term_index = int(row["term_index"])
         key = (relation_index, term_index)
         fixed_raw = row["fixed_value"]
+        vector_position = row.get("vector_position")
         lookup[key] = (
             bool(row["is_free"]),
             row["parameter"] if isinstance(row["parameter"], str) else None,
             int(row["parameter_index"]) if isinstance(row["parameter_index"], int) else None,
+            int(vector_position) if isinstance(vector_position, int) else None,
             float(fixed_raw) if isinstance(fixed_raw, (int, float)) else None,
         )
     return lookup
@@ -186,10 +211,10 @@ def _fallback_parameter_meta(
     term,
     fallback_label_index: dict[str, int],
     next_parameter_index: int,
-) -> tuple[bool, str | None, int | None, float | None, int]:
+) -> tuple[bool, str | None, int | None, int | None, float | None, int]:
     fixed_value = term.coefficient
     if fixed_value is not None:
-        return False, None, None, float(fixed_value), next_parameter_index
+        return False, None, None, None, float(fixed_value), next_parameter_index
 
     if term.label is not None:
         index = fallback_label_index.get(term.label)
@@ -197,11 +222,11 @@ def _fallback_parameter_meta(
             index = next_parameter_index
             fallback_label_index[term.label] = index
             next_parameter_index += 1
-        return True, term.label, index, None, next_parameter_index
+        return True, term.label, index, index - 1, None, next_parameter_index
 
     index = next_parameter_index
     parameter_name = f"p{index}"
-    return True, parameter_name, index, None, next_parameter_index + 1
+    return True, parameter_name, index, index - 1, None, next_parameter_index + 1
 
 
 def _resolve_block_name(latent: str, block_names: tuple[str, ...]) -> str | None:

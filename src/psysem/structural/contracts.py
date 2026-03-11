@@ -16,6 +16,7 @@ class StructuralPath:
     is_free: bool
     parameter: str | None
     parameter_index: int | None
+    vector_position: int | None
     fixed_value: float | None
     relation_index: int
     term_index: int
@@ -31,5 +32,7 @@ class StructuralDesign:
     observed_predictor_variables: tuple[str, ...]
     observed_endogenous_variables: tuple[str, ...]
     beta_matrix: pd.DataFrame
+    beta_parameter_index: pd.DataFrame
     gamma_matrix: pd.DataFrame
+    gamma_parameter_index: pd.DataFrame
     warnings: tuple[str, ...] = field(default_factory=tuple)
