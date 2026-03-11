@@ -34,7 +34,14 @@ from .efa import (
 )
 from .fit_indices import compute_basic_fit_indices
 from .invariance import InvarianceResult, test_measurement_invariance
-from .model import ModelSpec, parse_model
+from .model import (
+    ModelRelation,
+    ModelSpec,
+    ModelSyntaxError,
+    RelationTerm,
+    model_spec_from_esem_spec,
+    parse_model,
+)
 from .reporting import to_markdown
 from .result import SEMResult
 
@@ -62,7 +69,11 @@ __all__ = [
     "interpret_efa",
     "list_extraction_methods",
     "list_rotation_methods",
+    "ModelRelation",
     "ModelSpec",
+    "ModelSyntaxError",
+    "RelationTerm",
+    "model_spec_from_esem_spec",
     "RotationSpec",
     "register_extraction_method",
     "register_rotation_method",

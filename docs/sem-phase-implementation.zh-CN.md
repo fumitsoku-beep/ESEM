@@ -5,7 +5,7 @@
 当前日期：2026-03-11  
 适用分支：`main`
 
-实现状态：SEM 仍处于占位阶段（`parse_model` + `SEMModel.fit` smoke API），本文件为正式实施蓝图。
+实现状态：Phase 1 已启动并完成第二批能力（结构化 `parse_model`、`fit(data, spec=...)` 双入口统一、term modifier + 约束语法、`SEMResult` 扩展）；估计器仍为占位。
 
 ---
 
@@ -13,7 +13,7 @@
 
 | Phase | 目标 | 产出 | 状态 |
 | --- | --- | --- | --- |
-| Phase 1 | 入口与契约统一 | `ModelSpec` 扩展、`fit(data, spec=...)`、严格语法校验、标准结果字段 | 规划中 |
+| Phase 1 | 入口与契约统一 | `ModelSpec` 扩展、`fit(data, spec=...)`、严格语法校验、标准结果字段 | 进行中（第二批已完成） |
 | Phase 2 | 测量层矩阵构建 | measurement block 组装、识别性检查、参数索引 | 规划中 |
 | Phase 3 | 结构层 + ML 估计闭环 | structural 路径映射、目标函数、优化、SE 与基础 fit 指标 | 规划中 |
 | Phase 4（可选） | 高级能力与性能优化 | MLR/WLSMV、多组与不变性、bootstrap、报告增强 | 可选 |
@@ -35,6 +35,19 @@
 2. 无 measurement/structural 矩阵层。  
 3. 无估计器（ML/MLR/WLSMV）与推断层。  
 4. 无端到端 SEM 数值回归测试。  
+
+---
+
+## 2.1 最新进展（2026-03-11）
+
+Phase 1 已落地（第二批）：
+
+1. `parse_model` 支持结构化关系对象（含 RHS term 细分）。  
+2. 支持 term modifier：参数标签（如 `b1*x1`）与固定系数（如 `0.5*x1`）。  
+3. 支持约束表达占位：`label_a == label_b`。  
+4. 语法错误信息支持定位到 `statement` 与 `term`。  
+5. `SEMModel.fit` 已支持 `fit(data, spec=...)` 并统一到 `ModelSpec`。  
+6. `SEMResult` 扩展字段已接入 `summary` 与 `to_markdown`。  
 
 ---
 

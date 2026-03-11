@@ -17,7 +17,7 @@
 | --- | --- | --- |
 | `psysem.data` | 可用 | `spec` 解析 + 规则校验 + 与 `DataFrame` 对齐校验 |
 | `psysem.efa` | 可用（Phase 3 进行中） | `PAF/PCA`、KMO/Bartlett、PA/MAP/Scree/Kaiser、候选拟合评分与最优因子数选择 + 模块化解释输出 |
-| `SEMModel` | 占位接口 | 已有 `fit` 入口，完整 SEM/ESEM 估计器尚未接入 |
+| `SEMModel` | Phase 1 基础已落地 | 结构化 `parse_model` + `fit(data, spec=...)` 双入口统一；估计器仍为占位 |
 | `psysem.esem_spec` | 兼容层 | 旧导入路径，内部已转发到 `psysem.data` |
 
 ---
@@ -580,9 +580,11 @@ src/psysem/
 
 #### Phase 1: 入口与契约统一
 
-- [ ] 让 `SEMModel.fit(data, spec=...)` 支持显式 `ESEMSpec` 输入
-- [ ] 统一 `syntax` 与 `spec` 两条入口到同一内部 `ModelSpec`
-- [ ] 在 `SEMResult` 中增加标准字段占位：`warnings_`、`parameter_table_`、`fit_indices_`
+- [x] 让 `SEMModel.fit(data, spec=...)` 支持显式 `ESEMSpec` 输入
+- [x] 统一 `syntax` 与 `spec` 两条入口到同一内部 `ModelSpec`
+- [x] 在 `SEMResult` 中增加标准字段占位：`warnings`、`parameter_table`、`optimization_info`
+- [x] 结构化语法解析支持 term modifier（如 `b1*x1`、`0.5*x1`）与约束表达（`b1 == b2`）
+- [ ] 增加更完整约束语法（不等式/函数约束）与参数识别规则
 
 #### Phase 2: 测量层（Measurement）
 
