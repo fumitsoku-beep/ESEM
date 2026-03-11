@@ -5,6 +5,7 @@ import math
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from .measurement import MeasurementDesign
     from .model import ModelSpec
 
 
@@ -19,6 +20,7 @@ class SEMResult:
     optimization_info: dict[str, Any] = field(default_factory=dict)
     estimator: str | None = None
     model_spec: ModelSpec | None = None
+    measurement_design: MeasurementDesign | None = None
 
     def summary(self) -> str:
         lines = [
@@ -31,6 +33,12 @@ class SEMResult:
         if self.model_spec is not None:
             lines.append(f"Model source: {self.model_spec.source}")
             lines.append(f"Relations: {len(self.model_spec.relations)}")
+        if self.measurement_design is not None:
+            lines.append(
+                "Measurement design: "
+                f"{len(self.measurement_design.observed_variables)} observed / "
+                f"{len(self.measurement_design.latent_variables)} latent"
+            )
 
         if self.optimization_info:
             lines.append("Optimization:")

@@ -7,6 +7,7 @@ from .data import ESEMSpec
 
 _IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 _OPERATORS = ("=~", "~~", "~")
+_CONSTRAINT_OPERATORS = ("==", ">=", "<=")
 
 
 class ModelSyntaxError(ValueError):
@@ -20,6 +21,15 @@ class RelationTerm:
     variable: str
     coefficient: float | None = None
     label: str | None = None
+
+
+@dataclass(frozen=True)
+class ModelConstraint:
+    """One parsed parameter constraint expression."""
+
+    lhs: str
+    operator: str
+    rhs: str
 
 
 @dataclass(frozen=True)
@@ -45,6 +55,7 @@ class ModelSpec:
     block_names: tuple[str, ...] = ()
     warnings: tuple[str, ...] = field(default_factory=tuple)
     constraints: tuple[str, ...] = field(default_factory=tuple)
+    parsed_constraints: tuple[ModelConstraint, ...] = field(default_factory=tuple)
 
 
 def parse_model(syntax: str) -> ModelSpec:
@@ -58,9 +69,17 @@ def parse_model(syntax: str) -> ModelSpec:
     statements = _split_statements(cleaned)
     relation_statements: list[tuple[int, str]] = []
     constraints: list[str] = []
+    parsed_constraints: list[ModelConstraint] = []
     for index, statement in enumerate(statements, start=1):
-        if "==" in statement:
-            constraints.append(_parse_constraint(statement, statement_index=index))
+        constraint_operator = _detect_constraint_operator(statement, statement_index=index)
+        if constraint_operator is not None:
+            normalized, parsed = _parse_constraint(
+                statement,
+                statement_index=index,
+                operator=constraint_operator,
+            )
+            constraints.append(normalized)
+            parsed_constraints.append(parsed)
         else:
             relation_statements.append((index, statement))
     if not relation_statements:
@@ -75,6 +94,7 @@ def parse_model(syntax: str) -> ModelSpec:
         observed_variables=tuple(sorted(observed)),
         latent_variables=tuple(sorted(latent)),
         constraints=tuple(constraints),
+        parsed_constraints=tuple(parsed_constraints),
     )
 
 
@@ -219,8 +239,26 @@ def _parse_relation_term(chunk: str, *, statement_index: int, term_index: int) -
         return RelationTerm(variable=variable, label=modifier)
 
 
-def _parse_constraint(statement: str, *, statement_index: int) -> str:
-    left_raw, right_raw = statement.split("==", 1)
+def _detect_constraint_operator(statement: str, *, statement_index: int) -> str | None:
+    detected = [operator for operator in _CONSTRAINT_OPERATORS if operator in statement]
+    if not detected:
+        return None
+    if len(detected) > 1:
+        # Example: "a <= b == c"
+        raise _syntax_error(
+            f"Multiple constraint operators detected in `{statement}`.",
+            statement_index=statement_index,
+        )
+    return detected[0]
+
+
+def _parse_constraint(
+    statement: str,
+    *,
+    statement_index: int,
+    operator: str,
+) -> tuple[str, ModelConstraint]:
+    left_raw, right_raw = statement.split(operator, 1)
     left = left_raw.strip()
     right = right_raw.strip()
     if not left or not right:
@@ -228,9 +266,38 @@ def _parse_constraint(statement: str, *, statement_index: int) -> str:
             f"Invalid constraint `{statement}`.",
             statement_index=statement_index,
         )
-    _validate_identifier(left, context="constraint left-hand side", statement_index=statement_index)
-    _validate_identifier(right, context="constraint right-hand side", statement_index=statement_index)
-    return f"{left} == {right}"
+    left_value = _parse_constraint_operand(
+        left,
+        context="constraint left-hand side",
+        statement_index=statement_index,
+    )
+    right_value = _parse_constraint_operand(
+        right,
+        context="constraint right-hand side",
+        statement_index=statement_index,
+    )
+    normalized = f"{left_value} {operator} {right_value}"
+    return normalized, ModelConstraint(lhs=left_value, operator=operator, rhs=right_value)
+
+
+def _parse_constraint_operand(
+    token: str,
+    *,
+    context: str,
+    statement_index: int,
+) -> str:
+    if _IDENTIFIER_PATTERN.fullmatch(token):
+        return token
+    try:
+        value = float(token)
+    except ValueError as exc:
+        raise _syntax_error(
+            f"Invalid token `{token}` in {context}.",
+            statement_index=statement_index,
+        ) from exc
+    if value.is_integer():
+        return str(int(value))
+    return str(value)
 
 
 def _detect_operator(statement: str, *, statement_index: int) -> str:

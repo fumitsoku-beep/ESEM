@@ -33,6 +33,13 @@ def test_parse_model_supports_term_modifiers_and_constraints() -> None:
     assert spec.constraints == ("b1 == l1",)
 
 
+def test_parse_model_supports_inequality_constraints() -> None:
+    spec = parse_model("eta =~ x1 + x2\na >= 0\nb <= a")
+    assert spec.constraints == ("a >= 0", "b <= a")
+    assert spec.parsed_constraints[0].operator == ">="
+    assert spec.parsed_constraints[1].operator == "<="
+
+
 def test_parse_model_rejects_duplicate_path() -> None:
     with pytest.raises(ValueError, match="Duplicate path"):
         parse_model("y ~ x1\ny ~ x1")
@@ -59,8 +66,13 @@ def test_parse_model_requires_relation_when_only_constraints_given() -> None:
 
 
 def test_parse_model_rejects_invalid_constraint_tokens() -> None:
-    with pytest.raises(ValueError, match="constraint"):
-        parse_model("y ~ x1\nb1 == 1")
+    with pytest.raises(ValueError, match="Invalid token"):
+        parse_model("y ~ x1\nb1 >= unknown-token")
+
+
+def test_parse_model_rejects_malformed_constraint() -> None:
+    with pytest.raises(ValueError, match="Invalid constraint"):
+        parse_model("y ~ x1\nb1 ==")
 
 
 def test_parse_model_error_includes_statement_index() -> None:
@@ -126,8 +138,43 @@ def test_summary_and_markdown_include_phase1_fields() -> None:
     assert "Estimator: ml" in summary
     assert "Model source: syntax" in summary
     assert "Optimization:" in summary
+    assert "n_free_parameters" in summary
     assert "Estimator: `ml`" in report
     assert "## Optimization" in report
+
+
+def test_fit_builds_parameter_table_and_parameter_placeholders() -> None:
+    data = pd.DataFrame(
+        {
+            "x1": [1.0, 2.0, 3.0],
+            "x2": [1.5, 2.5, 3.5],
+            "x3": [0.8, 1.8, 2.8],
+            "y": [2.1, 3.2, 4.3],
+        }
+    )
+    syntax = "eta =~ l1*x1 + 1.0*x2 + x3\ny ~ b1*eta + 0.5*x1 + x2\nb1 == l1"
+    result = SEMModel(syntax).fit(data)
+    assert len(result.parameter_table) == 6
+    assert len(result.parameters) == 4
+    assert set(result.parameters) == {"l1", "b1", "p1", "p2"}
+    fixed_rows = [row for row in result.parameter_table if row["fixed_value"] is not None]
+    assert len(fixed_rows) == 2
+    assert any(row["fixed_value"] == pytest.approx(1.0) for row in fixed_rows)
+    assert any(row["fixed_value"] == pytest.approx(0.5) for row in fixed_rows)
+
+
+def test_fit_attaches_measurement_design() -> None:
+    data = pd.DataFrame(
+        {
+            "x1": [1.0, 2.0, 3.0],
+            "x2": [1.5, 2.5, 3.5],
+            "x3": [0.8, 1.8, 2.8],
+        }
+    )
+    result = SEMModel("eta =~ 1*x1 + x2 + x3").fit(data)
+    assert result.measurement_design is not None
+    assert result.measurement_design.lambda_matrix.shape == (3, 1)
+    assert any("n_measurement_latent" == key for key in result.optimization_info)
 
 
 def _esem_payload() -> dict[str, object]:

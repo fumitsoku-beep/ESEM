@@ -5,7 +5,7 @@
 当前日期：2026-03-11  
 适用分支：`main`
 
-实现状态：Phase 1 已启动并完成第二批能力（结构化 `parse_model`、`fit(data, spec=...)` 双入口统一、term modifier + 约束语法、`SEMResult` 扩展）；估计器仍为占位。
+实现状态：Phase 1 已完成第二批能力；Phase 2 已启动并落地 measurement 首版（`Lambda`/`Theta` 草图 + 基础识别性检查）；估计器仍为占位。
 
 ---
 
@@ -13,8 +13,8 @@
 
 | Phase | 目标 | 产出 | 状态 |
 | --- | --- | --- | --- |
-| Phase 1 | 入口与契约统一 | `ModelSpec` 扩展、`fit(data, spec=...)`、严格语法校验、标准结果字段 | 进行中（第二批已完成） |
-| Phase 2 | 测量层矩阵构建 | measurement block 组装、识别性检查、参数索引 | 规划中 |
+| Phase 1 | 入口与契约统一 | `ModelSpec` 扩展、`fit(data, spec=...)`、严格语法校验、标准结果字段 | 已完成（基础版） |
+| Phase 2 | 测量层矩阵构建 | measurement block 组装、识别性检查、参数索引 | 进行中（首批已完成） |
 | Phase 3 | 结构层 + ML 估计闭环 | structural 路径映射、目标函数、优化、SE 与基础 fit 指标 | 规划中 |
 | Phase 4（可选） | 高级能力与性能优化 | MLR/WLSMV、多组与不变性、bootstrap、报告增强 | 可选 |
 
@@ -32,7 +32,7 @@
 当前缺口：
 
 1. 无正式语法树（AST）和参数约束表达。  
-2. 无 measurement/structural 矩阵层。  
+2. measurement 矩阵层已起步，structural 矩阵层尚未实现。  
 3. 无估计器（ML/MLR/WLSMV）与推断层。  
 4. 无端到端 SEM 数值回归测试。  
 
@@ -44,10 +44,16 @@ Phase 1 已落地（第二批）：
 
 1. `parse_model` 支持结构化关系对象（含 RHS term 细分）。  
 2. 支持 term modifier：参数标签（如 `b1*x1`）与固定系数（如 `0.5*x1`）。  
-3. 支持约束表达占位：`label_a == label_b`。  
+3. 支持约束表达占位：`==`、`>=`、`<=`。  
 4. 语法错误信息支持定位到 `statement` 与 `term`。  
 5. `SEMModel.fit` 已支持 `fit(data, spec=...)` 并统一到 `ModelSpec`。  
 6. `SEMResult` 扩展字段已接入 `summary` 与 `to_markdown`。  
+7. `SEMModel.fit` 已生成参数表草稿（free/fixed/label）并写入 `parameter_table`。  
+
+Phase 2 已落地（首批）：
+
+1. 新增 `measurement` 模块，支持 `Lambda`/`Theta` 矩阵草图构建。  
+2. 增加基础识别性检查（最少指标数、marker 缺失告警）。  
 
 ---
 

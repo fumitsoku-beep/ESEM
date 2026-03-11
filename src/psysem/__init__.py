@@ -34,7 +34,9 @@ from .efa import (
 )
 from .fit_indices import compute_basic_fit_indices
 from .invariance import InvarianceResult, test_measurement_invariance
+from .measurement import MeasurementDesign, build_measurement_design, check_measurement_identification
 from .model import (
+    ModelConstraint,
     ModelRelation,
     ModelSpec,
     ModelSyntaxError,
@@ -48,6 +50,8 @@ from .result import SEMResult
 __all__ = [
     "__version__",
     "compute_basic_fit_indices",
+    "build_measurement_design",
+    "check_measurement_identification",
     "EFAConfig",
     "EFADiagnosticsConfig",
     "EFADiagnosticsResult",
@@ -69,6 +73,8 @@ __all__ = [
     "interpret_efa",
     "list_extraction_methods",
     "list_rotation_methods",
+    "MeasurementDesign",
+    "ModelConstraint",
     "ModelRelation",
     "ModelSpec",
     "ModelSyntaxError",

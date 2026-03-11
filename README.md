@@ -17,7 +17,7 @@
 | --- | --- | --- |
 | `psysem.data` | 可用 | `spec` 解析 + 规则校验 + 与 `DataFrame` 对齐校验 |
 | `psysem.efa` | 可用（Phase 3 进行中） | `PAF/PCA`、KMO/Bartlett、PA/MAP/Scree/Kaiser、候选拟合评分与最优因子数选择 + 模块化解释输出 |
-| `SEMModel` | Phase 1 基础已落地 | 结构化 `parse_model` + `fit(data, spec=...)` 双入口统一；估计器仍为占位 |
+| `SEMModel` | Phase 1 + Phase 2（起步） | 结构化解析 + `fit(data, spec=...)` 统一入口 + measurement 矩阵草图；估计器仍为占位 |
 | `psysem.esem_spec` | 兼容层 | 旧导入路径，内部已转发到 `psysem.data` |
 
 ---
@@ -56,7 +56,7 @@ python -m pytest -q
 
 ## EFA 测试与质量门禁（2026-03-11）
 
-当前仓库测试数量：`81`（其中 EFA 相关测试 `67`）。
+当前仓库测试数量：`103`（其中 EFA 相关测试 `67`）。
 
 EFA 已覆盖以下测试层级：
 
@@ -491,6 +491,11 @@ src/psysem/
     interpretation.py
     n_factors.py
     workflow.py
+  measurement/
+    __init__.py
+    contracts.py
+    builder.py
+    identification.py
   core.py
   model.py
   result.py
@@ -583,14 +588,14 @@ src/psysem/
 - [x] 让 `SEMModel.fit(data, spec=...)` 支持显式 `ESEMSpec` 输入
 - [x] 统一 `syntax` 与 `spec` 两条入口到同一内部 `ModelSpec`
 - [x] 在 `SEMResult` 中增加标准字段占位：`warnings`、`parameter_table`、`optimization_info`
-- [x] 结构化语法解析支持 term modifier（如 `b1*x1`、`0.5*x1`）与约束表达（`b1 == b2`）
-- [ ] 增加更完整约束语法（不等式/函数约束）与参数识别规则
+- [x] 结构化语法解析支持 term modifier（如 `b1*x1`、`0.5*x1`）与约束表达（`==`、`>=`、`<=`）
+- [ ] 增加更完整约束语法（函数约束）与参数识别规则
 
 #### Phase 2: 测量层（Measurement）
 
-- [ ] 新建 `psysem.measurement`，支持单 block CFA/ESEM 的矩阵构造
+- [x] 新建 `psysem.measurement`，支持单 block CFA/ESEM 的矩阵草图构造（`Lambda`/`Theta`）
 - [ ] 支持多 block 组装与 block 级旋转覆盖
-- [ ] 增加识别性检查（因子尺度设定、自由参数计数）
+- [x] 增加基础识别性检查（最少指标数、marker 缺失告警）
 
 #### Phase 3: 结构层（Structural）
 
