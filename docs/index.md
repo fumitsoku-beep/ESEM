@@ -36,7 +36,7 @@ This is the initial documentation placeholder for `psysem`.
 - `psysem.efa` Phase 2 (basic): candidate fitting, model scoring, and best factor-count selection
 - `psysem.efa` Phase 3 (in progress): modular interpretation output (`item_table`, `factor_table`, `residual_top_pairs`)
 - Expanded EFA test suite: validation, edge cases, reproducibility, and workflow integration
-- `psysem` SEM Phase 3 (batch 5): measurement/structural parameter-index mapping (`Lambda/Theta`, `Beta/Gamma/Psi`), fit-result integration, ML implied-covariance optimization prototype, and numerical inference prototype (`SE/z/p/CI`)
+- `psysem` SEM Phase 3 (batch 6): measurement/structural parameter-index mapping (`Lambda/Theta`, `Beta/Gamma/Psi`), fit-result integration, ML implied-covariance optimization prototype, numerical inference prototype (`SE/z/p/CI`), and basic fit-index computation (`AIC/BIC/SRMR/CFI/TLI/RMSEA`)
 
 ## Next milestones
 

@@ -12,6 +12,7 @@ from .estimation import (
     gaussian_ml_discrepancy,
     optimize_ml_parameters,
 )
+from .fit_indices import compute_basic_fit_indices, compute_fit_indices
 from .inference import estimate_parameter_inference
 from .model import ModelSpec, parse_model
 from .model import model_spec_from_esem_spec
@@ -53,6 +54,7 @@ class SEMModel:
         structural_design = _try_build_structural_design(model_spec, parameter_table)
         converged = True
         parameter_inference: tuple[dict[str, Any], ...] = ()
+        fit_indices = compute_basic_fit_indices()
         warnings: list[str] = []
         if measurement_design is not None:
             warnings.extend(check_measurement_identification(measurement_design))
@@ -120,6 +122,27 @@ class SEMModel:
                         for name, value in parameters.items()
                     }
                 if (
+                    ml_optimization.sample_covariance is not None
+                    and ml_optimization.implied_covariance is not None
+                ):
+                    fit_result = compute_fit_indices(
+                        sample_covariance=ml_optimization.sample_covariance.to_numpy(dtype=float),
+                        implied_covariance=ml_optimization.implied_covariance.to_numpy(dtype=float),
+                        n_obs=n_obs,
+                        n_free_parameters=parameter_index_map.n_free,
+                        objective=ml_optimization.objective,
+                    )
+                    fit_indices = fit_result.indices
+                    warnings.extend(fit_result.warnings)
+                    if fit_result.chi_square is not None:
+                        optimization_info["chi_square"] = fit_result.chi_square
+                    if fit_result.df_model is not None:
+                        optimization_info["df_model"] = fit_result.df_model
+                    if fit_result.chi_square_baseline is not None:
+                        optimization_info["chi_square_baseline"] = fit_result.chi_square_baseline
+                    if fit_result.df_baseline is not None:
+                        optimization_info["df_baseline"] = fit_result.df_baseline
+                if (
                     ml_optimization.success
                     and ml_optimization.sample_covariance is not None
                     and measurement_design is not None
@@ -179,7 +202,7 @@ class SEMModel:
             converged=converged,
             n_obs=n_obs,
             parameters=parameters,
-            fit_indices={},
+            fit_indices=fit_indices,
             parameter_table=parameter_table,
             warnings=tuple(dict.fromkeys(warnings)),
             optimization_info=optimization_info,

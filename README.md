@@ -17,7 +17,7 @@
 | --- | --- | --- |
 | `psysem.data` | 可用 | `spec` 解析 + 规则校验 + 与 `DataFrame` 对齐校验 |
 | `psysem.efa` | 可用（Phase 3 进行中） | `PAF/PCA`、KMO/Bartlett、PA/MAP/Scree/Kaiser、候选拟合评分与最优因子数选择 + 模块化解释输出 |
-| `SEMModel` | Phase 1 完成基础版 + Phase 2/3 起步 | 结构化解析 + 参数表草稿 + measurement(`Lambda/Theta`)/structural(`Beta/Gamma/Psi`) 矩阵草图 + 全局参数索引映射 + ML 优化原型 + 推断原型（SE/z/p/CI）；估计器仍为占位 |
+| `SEMModel` | Phase 1 完成基础版 + Phase 2/3 起步 | 结构化解析 + 参数表草稿 + measurement(`Lambda/Theta`)/structural(`Beta/Gamma/Psi`) 矩阵草图 + 全局参数索引映射 + ML 优化原型 + 推断原型（SE/z/p/CI）+ 拟合指标原型（AIC/BIC/SRMR/CFI/TLI/RMSEA）；估计器仍为占位 |
 | `psysem.esem_spec` | 兼容层 | 旧导入路径，内部已转发到 `psysem.data` |
 
 ---
@@ -56,7 +56,7 @@ python -m pytest -q
 
 ## EFA 测试与质量门禁（2026-03-11）
 
-当前仓库测试数量：`133`（其中 EFA 相关测试 `67`）。
+当前仓库测试数量：`137`（其中 EFA 相关测试 `67`）。
 
 EFA 已覆盖以下测试层级：
 
@@ -81,7 +81,7 @@ python -m pytest tests/test_efa.py tests/test_efa_* -q
 
 ## 快速开始
 
-### 1) SEM 占位拟合（当前 smoke API）
+### 1) SEM 原型拟合（当前 API）
 
 ```python
 import pandas as pd
@@ -625,7 +625,8 @@ src/psysem/
 
 #### Phase 5: 指标与报告
 
-- [ ] 新建 `psysem.fit`：CFI/TLI/RMSEA/SRMR/AIC/BIC 实现
+- [x] 在 `fit_indices` 中完成 CFI/TLI/RMSEA/SRMR/AIC/BIC 基础实现并接入 `SEMModel.fit`
+- [ ] 新建 `psysem.fit` 子模块并完善高阶指标/稳健版本
 - [ ] `reporting` 输出统一参数表和模型摘要
 - [ ] 增加导出接口（Markdown/CSV）与可复现元数据
 

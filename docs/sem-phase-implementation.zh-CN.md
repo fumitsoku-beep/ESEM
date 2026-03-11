@@ -5,7 +5,7 @@
 当前日期：2026-03-11  
 适用分支：`main`
 
-实现状态：Phase 1 已完成基础版；Phase 2 已完成第二批；Phase 3 已落地第五批（`Beta/Gamma/Psi` 草图 + 循环依赖基础检查 + 统一参数索引映射 + ML implied covariance/优化原型 + 数值推断原型）；估计器仍为占位。
+实现状态：Phase 1 已完成基础版；Phase 2 已完成第二批；Phase 3 已落地第六批（`Beta/Gamma/Psi` 草图 + 循环依赖基础检查 + 统一参数索引映射 + ML implied covariance/优化原型 + 数值推断原型 + 基础拟合指标原型）；估计器仍为占位。
 
 ---
 
@@ -26,14 +26,14 @@
 
 1. `parse_model(syntax)` 基础校验（非空字符串）。  
 2. `SEMModel.fit(data)` 占位接口，可返回 `SEMResult`。  
-3. `compute_basic_fit_indices()` 占位字典（键齐全，值暂为 `nan`）。  
+3. `compute_basic_fit_indices()` 已支持基础计算路径（无输入时仍保留 `nan` 占位兼容）。  
 4. `to_markdown(result)` 基础报告输出。  
 
 当前缺口：
 
 1. 无正式语法树（AST）和参数约束表达。  
 2. measurement/structural 矩阵层已起步，但估计闭环尚未实现。  
-3. ML 与推断已起步原型，但 MLR/WLSMV 与稳健推断尚未完成。  
+3. ML、推断与基础拟合指标已起步原型，但 MLR/WLSMV 与稳健统计尚未完成。  
 4. 无端到端 SEM 数值回归测试。  
 
 ---
@@ -57,7 +57,7 @@ Phase 2 已落地（第二批）：
 3. 支持多 block 组装映射（`block_latent_pairs`）。  
 4. measurement 层加载参数与全局 `parameter_table` 索引已对齐。  
 
-Phase 3 已落地（第五批）：
+Phase 3 已落地（第六批）：
 
 1. 新增 `structural` 模块，支持 structural path table 构建。  
 2. 产出 `Beta/Gamma` 矩阵草图（用于后续估计层输入）。  
@@ -70,6 +70,7 @@ Phase 3 已落地（第五批）：
 9. `SEMModel.fit` 在样本量满足阈值时可自动触发 ML 原型优化并回填参数值。  
 10. measurement 增加 `Theta` 参数索引矩阵，观测残差方差可映射到全局参数向量。  
 11. 新建 `inference` 模块，落地数值 Hessian 推断原型（SE/z/p/CI）并接入 `SEMModel.fit`。  
+12. `fit_indices` 升级为基础可计算版本（AIC/BIC/SRMR/CFI/TLI/RMSEA）并接入 `SEMModel.fit`。  
 
 ---
 
@@ -406,6 +407,7 @@ tests/
   test_sem_structural.py
   test_sem_estimation_ml.py
   test_sem_inference.py
+  test_sem_fit_indices.py
 ```
 
 ---

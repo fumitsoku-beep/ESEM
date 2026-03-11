@@ -196,6 +196,7 @@ def test_sem_model_fit_runs_ml_optimizer_on_sufficient_sample_size() -> None:
     assert "ml_n_optimized_observed" in result.optimization_info
     assert "n_inference_parameters" in result.optimization_info
     assert result.parameter_inference
+    assert set(result.fit_indices) == {"cfi", "tli", "rmsea", "srmr", "aic", "bic"}
 
 
 def test_estimate_parameter_inference_handles_failed_hessian() -> None:

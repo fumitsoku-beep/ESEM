@@ -168,7 +168,7 @@ def _parallel_analysis_thresholds(
     simulated = np.empty((n_iter, n_items), dtype=float)
     for i in range(n_iter):
         random_data = rng.standard_normal(size=(n_obs, n_items))
-        corr = np.corrcoef(random_data, rowvar=False)
+        corr = np.atleast_2d(np.asarray(np.corrcoef(random_data, rowvar=False), dtype=float))
         corr = _stabilize_correlation(corr)
         simulated[i, :] = _sorted_eigenvalues(corr)
     return np.quantile(simulated, percentile, axis=0)

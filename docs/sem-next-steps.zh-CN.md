@@ -6,7 +6,7 @@
 当前日期：2026-03-11  
 适用分支：`main`
 
-执行进度（更新）：Phase A 已启动并落地首批（数值 Hessian 推断原型已接入 `fit`）。
+执行进度（更新）：Phase A 已落地；Phase B 已启动并落地首批（基础拟合指标已接入 `fit`）。
 
 ---
 
@@ -18,12 +18,12 @@
 2. 矩阵草图：measurement(`Lambda/Theta`) + structural(`Beta/Gamma/Psi`) 已可构建。  
 3. 参数映射：全局 `parameter_index -> vector_position` 已统一。  
 4. ML 原型：`build_implied_covariance` + `optimize_ml_parameters` 已接入 `SEMModel.fit`。  
-5. 质量状态：`ruff + mypy + pytest` 全绿（当前 `130` tests）。
+5. 质量状态：`ruff + mypy + pytest` 全绿（当前 `137` tests）。
 
 当前关键缺口：
 
-1. 推断层缺失：`SE/z/p/CI` 未实现。  
-2. 拟合指标缺失：`CFI/TLI/RMSEA/SRMR/AIC/BIC` 仍是占位。  
+1. 推断层仍需稳健化：当前为数值 Hessian 原型，精度与异常场景覆盖待增强。  
+2. 拟合指标仍需完善：当前已实现基础版，但边界场景与稳健版本（如 robust 统计量）待补齐。  
 3. 优化鲁棒性不足：当前仍是原型级初值/边界/失败诊断。  
 4. 高级路径未覆盖：`MLR/WLSMV`、多组不变性、完整端到端数值回归。
 
@@ -105,6 +105,12 @@
 1. 正常模型下主要指标非 `nan`。  
 2. 边界模型（欠识别/近奇异）能返回可解释 warning。  
 3. 指标数值范围有基本合理性检查。
+
+当前进展（2026-03-11）：
+
+1. `fit_indices.py` 已由占位升级为基础可计算版本。  
+2. `SEMModel.fit` 已接入基础拟合指标计算与诊断回写。  
+3. `tests/test_sem_fit_indices.py` 已新增并覆盖正常路径 + 边界路径。
 
 ---
 
