@@ -16,6 +16,7 @@ class SEMResult:
     converged: bool
     n_obs: int
     parameters: dict[str, float] = field(default_factory=dict)
+    parameter_inference: tuple[dict[str, Any], ...] = field(default_factory=tuple)
     fit_indices: dict[str, float] = field(default_factory=dict)
     parameter_table: tuple[dict[str, Any], ...] = field(default_factory=tuple)
     warnings: tuple[str, ...] = field(default_factory=tuple)
@@ -39,6 +40,11 @@ class SEMResult:
             lines.append(f"Relations: {len(self.model_spec.relations)}")
         if self.parameter_index_map is not None:
             lines.append(f"Free parameters: {self.parameter_index_map.n_free}")
+        if self.parameter_inference:
+            n_with_se = sum(
+                1 for row in self.parameter_inference if isinstance(row.get("standard_error"), float)
+            )
+            lines.append(f"Inference rows: {len(self.parameter_inference)} ({n_with_se} with SE)")
         if self.measurement_design is not None:
             lines.append(
                 "Measurement design: "

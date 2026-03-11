@@ -9,6 +9,7 @@ from psysem import (
     build_ml_context,
     build_parameter_index_map,
     build_start_vector,
+    estimate_parameter_inference,
     gaussian_ml_discrepancy,
     optimize_ml_parameters,
     parameter_vector_to_named_values,
@@ -193,3 +194,24 @@ def test_sem_model_fit_runs_ml_optimizer_on_sufficient_sample_size() -> None:
     assert result.optimization_info["ml_optimized"] is True
     assert "ml_optimization_success" in result.optimization_info
     assert "ml_n_optimized_observed" in result.optimization_info
+    assert "n_inference_parameters" in result.optimization_info
+    assert result.parameter_inference
+
+
+def test_estimate_parameter_inference_handles_failed_hessian() -> None:
+    parameter_table = (
+        {"is_free": True, "parameter": "p1", "parameter_index": 1},
+    )
+    index_map = build_parameter_index_map(parameter_table)
+
+    def bad_objective(_: np.ndarray) -> float:
+        raise RuntimeError("boom")
+
+    result = estimate_parameter_inference(
+        objective_fn=bad_objective,
+        parameter_vector=np.array([0.3], dtype=float),
+        parameter_index_map=index_map,
+    )
+    assert len(result.entries) == 1
+    assert result.entries[0].standard_error is None
+    assert any("Numerical Hessian failed" in warning for warning in result.warnings)

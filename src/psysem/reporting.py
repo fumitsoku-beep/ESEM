@@ -13,6 +13,11 @@ def to_markdown(result: SEMResult) -> str:
         lines.append(f"- Relations: `{len(result.model_spec.relations)}`")
     if result.parameter_index_map is not None:
         lines.append(f"- Free parameters: `{result.parameter_index_map.n_free}`")
+    if result.parameter_inference:
+        n_with_se = sum(
+            1 for row in result.parameter_inference if isinstance(row.get("standard_error"), float)
+        )
+        lines.append(f"- Inference rows: `{len(result.parameter_inference)}` (`{n_with_se}` with SE)")
     if result.measurement_design is not None:
         lines.append(
             "- Measurement design: "

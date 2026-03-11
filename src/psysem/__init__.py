@@ -43,6 +43,7 @@ from .estimation import (
     parameter_vector_to_named_values,
 )
 from .fit_indices import compute_basic_fit_indices
+from .inference import InferenceResult, ParameterInferenceEntry, estimate_parameter_inference
 from .invariance import InvarianceResult, test_measurement_invariance
 from .measurement import (
     LoadingParameter,
@@ -98,7 +99,9 @@ __all__ = [
     "FactorSelectionResult",
     "fit_efa",
     "gaussian_ml_discrepancy",
+    "estimate_parameter_inference",
     "InvarianceResult",
+    "InferenceResult",
     "interpret_efa",
     "list_extraction_methods",
     "list_rotation_methods",
@@ -124,6 +127,7 @@ __all__ = [
     "parse_model",
     "ParameterIndexEntry",
     "ParameterIndexMap",
+    "ParameterInferenceEntry",
     "sem",
     "SpecValidationError",
     "StructuralDesign",

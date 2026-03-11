@@ -3,9 +3,16 @@ from __future__ import annotations
 from typing import Any
 
 import math
+import numpy as np
 
 from .data import ESEMSpec
-from .estimation import build_ml_context, optimize_ml_parameters
+from .estimation import (
+    build_implied_covariance,
+    build_ml_context,
+    gaussian_ml_discrepancy,
+    optimize_ml_parameters,
+)
+from .inference import estimate_parameter_inference
 from .model import ModelSpec, parse_model
 from .model import model_spec_from_esem_spec
 from .measurement import MeasurementDesign, build_measurement_design, check_measurement_identification
@@ -45,6 +52,7 @@ class SEMModel:
         measurement_design = _try_build_measurement_design(model_spec, parameter_table)
         structural_design = _try_build_structural_design(model_spec, parameter_table)
         converged = True
+        parameter_inference: tuple[dict[str, Any], ...] = ()
         warnings: list[str] = []
         if measurement_design is not None:
             warnings.extend(check_measurement_identification(measurement_design))
@@ -111,6 +119,53 @@ class SEMModel:
                         name: ml_optimization.parameter_values.get(name, value)
                         for name, value in parameters.items()
                     }
+                if (
+                    ml_optimization.success
+                    and ml_optimization.sample_covariance is not None
+                    and measurement_design is not None
+                    and len(ml_optimization.parameter_vector) == parameter_index_map.n_free
+                ):
+                    sample_cov_array = ml_optimization.sample_covariance.to_numpy(dtype=float)
+
+                    def objective_for_inference(vector) -> float:
+                        implied = build_implied_covariance(
+                            measurement_design,
+                            vector,
+                            parameter_index_map,
+                            structural_design=structural_design,
+                            observed_variables=ml_optimization.observed_variables,
+                        )
+                        return gaussian_ml_discrepancy(
+                            sample_cov_array,
+                            implied.to_numpy(dtype=float),
+                        )
+
+                    inference_result = estimate_parameter_inference(
+                        objective_fn=objective_for_inference,
+                        parameter_vector=np.array(ml_optimization.parameter_vector, dtype=float),
+                        parameter_index_map=parameter_index_map,
+                    )
+                    warnings.extend(inference_result.warnings)
+                    parameter_inference = tuple(
+                        {
+                            "parameter": entry.parameter,
+                            "parameter_index": entry.parameter_index,
+                            "vector_position": entry.vector_position,
+                            "estimate": entry.estimate,
+                            "standard_error": entry.standard_error,
+                            "z_value": entry.z_value,
+                            "p_value": entry.p_value,
+                            "ci_lower": entry.ci_lower,
+                            "ci_upper": entry.ci_upper,
+                        }
+                        for entry in inference_result.entries
+                    )
+                    optimization_info["n_inference_parameters"] = len(parameter_inference)
+                    optimization_info["n_inference_with_se"] = sum(
+                        1
+                        for row in parameter_inference
+                        if isinstance(row["standard_error"], float)
+                    )
                 converged = ml_optimization.success
             elif measurement_design is None:
                 warnings.append("ML optimization skipped: measurement design is required in prototype.")
@@ -131,6 +186,7 @@ class SEMModel:
             estimator=estimator,
             model_spec=model_spec,
             parameter_index_map=parameter_index_map,
+            parameter_inference=parameter_inference,
             measurement_design=measurement_design,
             structural_design=structural_design,
         )
