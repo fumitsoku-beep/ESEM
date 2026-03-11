@@ -19,6 +19,7 @@ This is the initial documentation placeholder for `psysem`.
 ## EFA Implementation Docs
 
 - [EFA Phase 1 Implementation (ZH)](efa-phase1-implementation.zh-CN.md)
+- [EFA Testing and Quality Gate (ZH)](efa-testing.zh-CN.md)
 
 ## Current scope
 
@@ -28,6 +29,8 @@ This is the initial documentation placeholder for `psysem`.
 - `psysem.data` module for ESEM spec/data validation
 - `psysem.efa` Phase 1: diagnostics (KMO/Bartlett) and factor-count suggestion (PA/MAP/Scree/Kaiser)
 - `psysem.efa` Phase 2 (basic): candidate fitting, model scoring, and best factor-count selection
+- `psysem.efa` Phase 3 (in progress): modular interpretation output (`item_table`, `factor_table`, `residual_top_pairs`)
+- Expanded EFA test suite: validation, edge cases, reproducibility, and workflow integration
 
 ## Next milestones
 

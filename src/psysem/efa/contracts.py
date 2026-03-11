@@ -93,11 +93,32 @@ class EFAEvaluationResult:
 
 
 @dataclass(frozen=True)
+class EFAInterpretationConfig:
+    salient_loading: float = 0.30
+    cross_loading: float = 0.30
+    min_h2: float = 0.20
+    min_salient_items_per_factor: int = 2
+    rmsr_warning: float = 0.08
+    max_abs_residual_warning: float = 0.10
+    residual_top_n: int = 10
+
+
+@dataclass
+class EFAInterpretationResult:
+    item_table: pd.DataFrame = field(default_factory=pd.DataFrame)
+    factor_table: pd.DataFrame = field(default_factory=pd.DataFrame)
+    residual_top_pairs: pd.DataFrame = field(default_factory=pd.DataFrame)
+    warnings: tuple[str, ...] = field(default_factory=tuple)
+    summary: dict[str, float] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
 class EFAWorkflowConfig:
     items: tuple[str, ...]
     selection: FactorSelectionConfig = field(default_factory=lambda: FactorSelectionConfig(items=()))
     diagnostics: EFADiagnosticsConfig = field(default_factory=lambda: EFADiagnosticsConfig(items=()))
     evaluation: EFAEvaluationConfig = field(default_factory=EFAEvaluationConfig)
+    interpretation: EFAInterpretationConfig = field(default_factory=EFAInterpretationConfig)
     extraction: str = "paf"
     rotation: str = "varimax"
     max_iter: int = 200
@@ -106,6 +127,7 @@ class EFAWorkflowConfig:
     candidate_strategy: str = "selection_union"
     include_consensus: bool = True
     manual_candidates: tuple[int, ...] = ()
+    include_interpretation: bool = True
 
 
 @dataclass
@@ -114,8 +136,10 @@ class EFAWorkflowResult:
     selection: FactorSelectionResult
     candidate_results: dict[int, "EFAResult"]
     candidate_evaluations: dict[int, EFAEvaluationResult]
+    candidate_interpretations: dict[int, EFAInterpretationResult]
     comparison_table: pd.DataFrame
     best_n_factors: int
     best_model: "EFAResult"
     best_evaluation: EFAEvaluationResult
+    best_interpretation: EFAInterpretationResult | None
     warnings: tuple[str, ...] = field(default_factory=tuple)

@@ -16,7 +16,7 @@
 | 模块 | 状态 | 说明 |
 | --- | --- | --- |
 | `psysem.data` | 可用 | `spec` 解析 + 规则校验 + 与 `DataFrame` 对齐校验 |
-| `psysem.efa` | 可用（Phase 2 基础版） | `PAF/PCA`、KMO/Bartlett、PA/MAP/Scree/Kaiser、候选拟合评分与最优因子数选择 |
+| `psysem.efa` | 可用（Phase 3 进行中） | `PAF/PCA`、KMO/Bartlett、PA/MAP/Scree/Kaiser、候选拟合评分与最优因子数选择 + 模块化解释输出 |
 | `SEMModel` | 占位接口 | 已有 `fit` 入口，完整 SEM/ESEM 估计器尚未接入 |
 | `psysem.esem_spec` | 兼容层 | 旧导入路径，内部已转发到 `psysem.data` |
 
@@ -47,10 +47,35 @@ pip install -e .[dev]
 开发环境常用命令：
 
 ```bash
-ruff check .
-mypy src
-pytest
+python -m ruff check .
+python -m mypy src
+python -m pytest -q
 ```
+
+---
+
+## EFA 测试与质量门禁（2026-03-11）
+
+当前仓库测试数量：`81`（其中 EFA 相关测试 `67`）。
+
+EFA 已覆盖以下测试层级：
+
+1. `fit`：输入校验、提取/旋转注册、残差结构、告警触发
+2. `diagnostics`：`KMO/Bartlett`、缺失值策略、常量项/奇异矩阵容错
+3. `n_factors`：`PA/MAP/Scree/Kaiser`、共识策略、可复现性、参数边界
+4. `evaluation`：候选评分、阈值校验、结果行导出
+5. `interpretation`：`item_table/factor_table/residual_top_pairs` 与阈值校验
+6. `workflow`：端到端流程、候选策略、解释开关、配置一致性
+
+仅运行 EFA 测试：
+
+```bash
+python -m pytest tests/test_efa.py tests/test_efa_* -q
+```
+
+详细说明见：
+
+- [docs/efa-testing.zh-CN.md](docs/efa-testing.zh-CN.md)
 
 ---
 
@@ -176,13 +201,14 @@ print(selection.suggestions_by_method)
 print(selection.consensus_n_factors)
 ```
 
-### 5) EFA 自动化工作流（Phase 2 基础版）
+### 5) EFA 自动化工作流（Phase 2 + Phase 3 解释输出）
 
 ```python
 import pandas as pd
 from psysem import (
     EFADiagnosticsConfig,
     EFAEvaluationConfig,
+    EFAInterpretationConfig,
     EFAWorkflowConfig,
     FactorSelectionConfig,
     run_efa_workflow,
@@ -198,8 +224,15 @@ workflow = run_efa_workflow(
         diagnostics=EFADiagnosticsConfig(items=()),
         selection=FactorSelectionConfig(items=(), n_min=1, n_max=4, pa_iter=200, random_state=42),
         evaluation=EFAEvaluationConfig(),
+        interpretation=EFAInterpretationConfig(
+            salient_loading=0.30,
+            cross_loading=0.30,
+            min_h2=0.20,
+            residual_top_n=10,
+        ),
         candidate_strategy="selection_union",
         include_consensus=True,
+        include_interpretation=True,
         extraction="paf",
         rotation="varimax",
     ),
@@ -207,6 +240,39 @@ workflow = run_efa_workflow(
 
 print(workflow.best_n_factors)
 print(workflow.comparison_table[["n_factors", "score"]])
+if workflow.best_interpretation is not None:
+    print(workflow.best_interpretation.summary)
+    print(workflow.best_interpretation.residual_top_pairs.head())
+```
+
+### 6) 单模型解释输出（Phase 3）
+
+```python
+import pandas as pd
+from psysem import EFAConfig, EFAInterpretationConfig, fit_efa, interpret_efa
+
+data = pd.read_csv("examples/data/efa_demo_input.csv")
+items = tuple(data.columns)
+
+fitted = fit_efa(
+    data,
+    EFAConfig(items=items, n_factors=2, extraction="paf", rotation="varimax"),
+)
+interpreted = interpret_efa(
+    fitted,
+    EFAInterpretationConfig(
+        salient_loading=0.30,
+        cross_loading=0.30,
+        min_h2=0.20,
+        min_salient_items_per_factor=2,
+        residual_top_n=10,
+    ),
+)
+
+print(interpreted.item_table.head())
+print(interpreted.factor_table)
+print(interpreted.residual_top_pairs.head())
+print(interpreted.warnings)
 ```
 
 `fit_efa` 当前结果字段：
@@ -224,6 +290,23 @@ print(workflow.comparison_table[["n_factors", "score"]])
 | `factor_correlation` | 因子相关矩阵（当前正交旋转为单位阵） |
 | `cross_loaded_items` | 交叉载荷题项列表（阈值 `0.30`） |
 | `warnings` | 解读告警（低共同度/高残差/交叉载荷等） |
+
+`interpret_efa` 当前结果字段：
+
+| 字段 | 说明 |
+| --- | --- |
+| `item_table` | 题项级解读表（主载荷、`h2/u2/com`、交叉载荷计数、低共同度标记） |
+| `factor_table` | 因子级解读表（`ss_loadings`、方差占比、累计方差、显著题项数） |
+| `residual_top_pairs` | 绝对残差最大的题项对（Top-N） |
+| `warnings` | 基于阈值规则生成的解释告警 |
+| `summary` | 汇总指标（交叉载荷个数、低共同度个数、`rmsr`、最大残差等） |
+
+`run_efa_workflow` 结果对象新增字段：
+
+| 字段 | 说明 |
+| --- | --- |
+| `candidate_interpretations` | `n_factors -> EFAInterpretationResult` 映射 |
+| `best_interpretation` | 最优候选对应的解释结果（可关闭） |
 
 ---
 
@@ -329,6 +412,18 @@ print(workflow.comparison_table[["n_factors", "score"]])
 | `cross_loading_penalty` | `float` | `1.00` | 交叉载荷惩罚权重 |
 | `factor_balance_penalty` | `float` | `0.25` | 因子不平衡惩罚权重 |
 
+`EFAInterpretationConfig` 主要参数：
+
+| 参数 | 类型 | 默认值 | 说明 |
+| --- | --- | --- | --- |
+| `salient_loading` | `float` | `0.30` | 显著载荷阈值 |
+| `cross_loading` | `float` | `0.30` | 交叉载荷判定阈值（需 `>= salient_loading`） |
+| `min_h2` | `float` | `0.20` | 低共同度判定阈值 |
+| `min_salient_items_per_factor` | `int` | `2` | 因子最少显著题项数阈值 |
+| `rmsr_warning` | `float` | `0.08` | RMSR 告警阈值 |
+| `max_abs_residual_warning` | `float` | `0.10` | 最大绝对残差告警阈值 |
+| `residual_top_n` | `int` | `10` | 输出的 Top-N 残差题项对数量 |
+
 `EFAWorkflowConfig` 主要参数：
 
 | 参数 | 类型 | 默认值 | 说明 |
@@ -337,11 +432,16 @@ print(workflow.comparison_table[["n_factors", "score"]])
 | `selection` | `FactorSelectionConfig` | - | 因子数建议配置 |
 | `diagnostics` | `EFADiagnosticsConfig` | - | 诊断配置 |
 | `evaluation` | `EFAEvaluationConfig` | - | 评分配置 |
+| `interpretation` | `EFAInterpretationConfig` | - | 解释输出配置 |
 | `extraction` | `str` | `paf` | 候选模型提取方法 |
 | `rotation` | `str` | `varimax` | 候选模型旋转方法 |
+| `max_iter` | `int` | `200` | 候选拟合迭代上限 |
+| `tol` | `float` | `1e-6` | 候选拟合收敛阈值 |
+| `min_uniqueness` | `float` | `0.005` | 唯一性下界 |
 | `candidate_strategy` | `str` | `selection_union` | 候选策略：`selection_union` 或 `range` |
 | `include_consensus` | `bool` | `True` | 候选中是否包含共识因子数 |
 | `manual_candidates` | `tuple[int, ...]` | `()` | 手动补充候选因子数 |
+| `include_interpretation` | `bool` | `True` | 是否为每个候选自动构建解释结果 |
 
 可注册自定义方法：
 
@@ -383,7 +483,14 @@ src/psysem/
     validator.py
     validators/
   efa/
+    __init__.py
+    contracts.py
+    diagnostics.py
+    evaluation.py
     fit.py
+    interpretation.py
+    n_factors.py
+    workflow.py
   core.py
   model.py
   result.py
@@ -418,6 +525,13 @@ from psysem.data import esem_spec_from_dict, validate_esem_spec
 EFA 分阶段实施文档（详细步骤）：
 
 - [docs/efa-phase1-implementation.zh-CN.md](docs/efa-phase1-implementation.zh-CN.md)
+
+EFA 当前阶段进展：
+
+1. Phase 1：已完成（诊断 + 因子数建议）
+2. Phase 2：已完成基础版（候选拟合 + 评分 + 最优候选选择）
+3. Phase 3：进行中（模块化解释输出 `interpret_efa` + workflow 接入）
+4. Phase 4（可选）：未开始（高级方法与性能优化）
 
 ---
 

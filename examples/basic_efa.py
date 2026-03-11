@@ -85,6 +85,7 @@ def main() -> None:
     diag = workflow.diagnostics
     selection = workflow.selection
     result = workflow.best_model
+    interpretation = workflow.best_interpretation
 
     print(f"Input data: {DATA_PATH}")
     print(f"Shape: {data.shape}")
@@ -113,6 +114,12 @@ def main() -> None:
         print("Warnings:")
         for warning in result.warnings:
             print(f"- {warning}")
+    if interpretation is not None:
+        print("\nInterpretation summary:")
+        for key, value in interpretation.summary.items():
+            print(f"{key}: {value:.6f}")
+        print("\nTop residual pairs:")
+        print(interpretation.residual_top_pairs.to_string(index=False))
     print("\nLoadings:")
     print(result.loadings.round(4).to_string())
 

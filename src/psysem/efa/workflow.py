@@ -11,6 +11,7 @@ from .contracts import (
 from .diagnostics import run_efa_diagnostics
 from .evaluation import evaluate_efa_model, evaluation_to_series
 from .fit import EFAConfig, EFAResult, fit_efa
+from .interpretation import interpret_efa
 from .n_factors import suggest_n_factors
 
 
@@ -26,6 +27,7 @@ def run_efa_workflow(data: pd.DataFrame, config: EFAWorkflowConfig) -> EFAWorkfl
 
     candidate_results: dict[int, EFAResult] = {}
     candidate_evals = {}
+    candidate_interpretations = {}
     rows: list[pd.Series] = []
     warning_list = list(selection.warnings)
     warning_list.extend(diagnostics.warnings)
@@ -44,6 +46,10 @@ def run_efa_workflow(data: pd.DataFrame, config: EFAWorkflowConfig) -> EFAWorkfl
         eval_result = evaluate_efa_model(efa_result, config.evaluation)
         candidate_results[n_factors] = efa_result
         candidate_evals[n_factors] = eval_result
+        if config.include_interpretation:
+            candidate_interpretations[n_factors] = interpret_efa(
+                efa_result, config.interpretation
+            )
         row = evaluation_to_series(eval_result)
         row["n_factors"] = n_factors
         rows.append(row)
@@ -58,15 +64,18 @@ def run_efa_workflow(data: pd.DataFrame, config: EFAWorkflowConfig) -> EFAWorkfl
         raise ValueError("No candidate models were fitted.")
 
     best_n_factors = int(comparison.iloc[0]["n_factors"])
+    best_interpretation = candidate_interpretations.get(best_n_factors)
     return EFAWorkflowResult(
         diagnostics=diagnostics,
         selection=selection,
         candidate_results=candidate_results,
         candidate_evaluations=candidate_evals,
+        candidate_interpretations=candidate_interpretations,
         comparison_table=comparison.reset_index(drop=True),
         best_n_factors=best_n_factors,
         best_model=candidate_results[best_n_factors],
         best_evaluation=candidate_evals[best_n_factors],
+        best_interpretation=best_interpretation,
         warnings=tuple(dict.fromkeys(warning_list)),
     )
 

@@ -2,10 +2,10 @@
 
 本文档用于指导 `psysem` 的 EFA 能力从“当前基础实现”升级到“可诊断、可自动选因子数、可调参”的工程版本。
 
-当前日期：2026-03-10  
+当前日期：2026-03-11  
 适用分支：`main`
 
-实现状态：Phase 1 已完成（诊断 + 因子数建议 API 与测试已落地）。
+实现状态：Phase 1 与 Phase 2 基础版已完成；Phase 3 已完成模块化解释层首版并接入 workflow。
 
 ---
 
@@ -15,8 +15,20 @@
 | --- | --- | --- | --- |
 | Phase 1 | 诊断与因子数建议 | `KMO`、`Bartlett`、`PA`、`MAP`、`Scree`、`Kaiser` | 已完成 |
 | Phase 2 | 自动化候选拟合与最优因子数选择 | 候选比较表、`best_n_factors`、综合评分 | 已完成（基础版） |
-| Phase 3 | R 风格解读输出增强 | `h2/u2/com`、残差摘要、因子结构告警 | 进行中（已完成第一批字段） |
+| Phase 3 | R 风格解读输出增强 | `h2/u2/com`、残差摘要、因子结构告警 | 进行中（已完成模块化解释层首版） |
 | Phase 4（可选） | 高级方法与性能优化 | ML 提取、斜交旋转扩展、并行与 bootstrap | 可选 |
+
+---
+
+## 最新进展（2026-03-11）
+
+Phase 3 已落地（首版）：
+
+1. 新增 `interpret_efa(result, config=...)`，返回 `EFAInterpretationResult`。  
+2. 新增 `EFAInterpretationConfig`，统一解读阈值与残差 Top-N 参数。  
+3. `EFAWorkflowConfig` 新增 `interpretation` 与 `include_interpretation`。  
+4. `EFAWorkflowResult` 新增 `candidate_interpretations` 与 `best_interpretation`。  
+5. 已补充对应测试与示例脚本输出。
 
 ---
 
@@ -326,7 +338,15 @@ sel = suggest_n_factors(data, FactorSelectionConfig(items=("i1", "i2", "i3", "i4
 
 ---
 
-## 8. 风险与缓解
+## 8. 测试文档
+
+EFA 测试覆盖与质量门禁详见：
+
+- [EFA 测试与质量门禁（ZH）](efa-testing.zh-CN.md)
+
+---
+
+## 9. 风险与缓解
 
 1. 风险：小样本导致相关矩阵不稳定。  
 缓解：增加样本充足性 warning，不直接静默失败。  
@@ -339,7 +359,7 @@ sel = suggest_n_factors(data, FactorSelectionConfig(items=("i1", "i2", "i3", "i4
 
 ---
 
-## 9. 下一步执行顺序
+## 10. 下一步执行顺序
 
 1. 先实现 `contracts.py` + `diagnostics.py`（Step 1-4）。  
 2. 再实现 `n_factors.py`（Step 5-8）。  

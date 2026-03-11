@@ -8,3 +8,4 @@ nav:
   - Home: index.md
   - Parameters (ZH): parameters.zh-CN.md
   - EFA Phase 1 (ZH): efa-phase1-implementation.zh-CN.md
+  - EFA Testing (ZH): efa-testing.zh-CN.md

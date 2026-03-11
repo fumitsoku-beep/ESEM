@@ -139,3 +139,97 @@ def test_register_existing_method_requires_overwrite() -> None:
 
     with pytest.raises(ValueError, match="already registered"):
         register_rotation_method("varimax", custom_rotation, overwrite=False)
+
+
+def test_fit_efa_rejects_non_dataframe_input() -> None:
+    config = EFAConfig(items=("i1", "i2", "i3"), n_factors=1)
+    with pytest.raises(TypeError, match="pandas.DataFrame"):
+        fit_efa(data=[1, 2, 3], config=config)  # type: ignore[arg-type]
+
+
+def test_fit_efa_rejects_invalid_n_factors() -> None:
+    data = _synthetic_efa_data()
+    with pytest.raises(ValueError, match="`n_factors` must be > 0"):
+        fit_efa(data, EFAConfig(items=("i1", "i2", "i3"), n_factors=0))
+    with pytest.raises(ValueError, match="smaller than number of items"):
+        fit_efa(data, EFAConfig(items=("i1", "i2", "i3"), n_factors=3))
+
+
+def test_fit_efa_rejects_invalid_optimization_settings() -> None:
+    data = _synthetic_efa_data()
+    with pytest.raises(ValueError, match="`max_iter` must be > 0"):
+        fit_efa(data, EFAConfig(items=("i1", "i2", "i3"), n_factors=1, max_iter=0))
+    with pytest.raises(ValueError, match="`tol` must be > 0"):
+        fit_efa(data, EFAConfig(items=("i1", "i2", "i3"), n_factors=1, tol=0.0))
+    with pytest.raises(ValueError, match="`min_uniqueness` must be between 0 and 1"):
+        fit_efa(data, EFAConfig(items=("i1", "i2", "i3"), n_factors=1, min_uniqueness=1.0))
+
+
+def test_fit_efa_accepts_case_insensitive_method_names() -> None:
+    data = _synthetic_efa_data()
+    result = fit_efa(
+        data,
+        EFAConfig(
+            items=("i1", "i2", "i3", "i4", "i5", "i6"),
+            n_factors=2,
+            extraction="PAF",
+            rotation="VARIMAX",
+        ),
+    )
+    assert result.extraction == "paf"
+    assert result.rotation == "varimax"
+
+
+def test_fit_efa_residual_matrix_has_zero_diagonal_and_is_symmetric() -> None:
+    data = _synthetic_efa_data()
+    result = fit_efa(
+        data,
+        EFAConfig(items=("i1", "i2", "i3", "i4", "i5", "i6"), n_factors=2),
+    )
+    residual = result.residual_matrix.to_numpy(dtype=float)
+    assert np.allclose(np.diag(residual), 0.0)
+    assert np.allclose(residual, residual.T)
+
+
+def test_fit_efa_warns_for_cross_loaded_and_boundary_uniqueness() -> None:
+    def dense_extraction(corr: np.ndarray, config: EFAConfig):
+        p = corr.shape[0]
+        loadings = np.full((p, config.n_factors), 0.80, dtype=float)
+        communalities = np.sum(loadings * loadings, axis=1)
+        return loadings, communalities, 1, True
+
+    def identity_rotation(loadings: np.ndarray, _: EFAConfig):
+        return loadings
+
+    register_extraction_method("test_dense_cross", dense_extraction, overwrite=True)
+    register_rotation_method("test_identity_dense", identity_rotation, overwrite=True)
+
+    data = _synthetic_efa_data()
+    result = fit_efa(
+        data,
+        EFAConfig(
+            items=("i1", "i2", "i3", "i4", "i5", "i6"),
+            n_factors=2,
+            extraction="test_dense_cross",
+            rotation="test_identity_dense",
+            min_uniqueness=0.01,
+        ),
+    )
+    joined = " | ".join(result.warnings).lower()
+    assert "boundary uniqueness" in joined
+    assert "cross-loaded items detected" in joined
+    assert len(result.cross_loaded_items) == 6
+
+
+def test_register_method_rejects_invalid_names() -> None:
+    def passthrough_extraction(corr: np.ndarray, config: EFAConfig):
+        p = corr.shape[0]
+        return np.zeros((p, config.n_factors)), np.zeros(p), 1, True
+
+    def passthrough_rotation(loadings: np.ndarray, _: EFAConfig):
+        return loadings
+
+    with pytest.raises(TypeError, match="must be a string"):
+        register_extraction_method(123, passthrough_extraction, overwrite=True)  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="cannot be empty"):
+        register_rotation_method("   ", passthrough_rotation, overwrite=True)

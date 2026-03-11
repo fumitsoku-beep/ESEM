@@ -220,3 +220,96 @@ def test_suggest_n_factors_rejects_non_positive_consensus_weight() -> None:
     )
     with pytest.raises(ValueError, match="consensus_weights"):
         suggest_n_factors(data, config)
+
+
+def test_suggest_n_factors_defaults_n_max_to_n_items_minus_one() -> None:
+    data = _synthetic_efa_data()
+    config = FactorSelectionConfig(
+        items=("i1", "i2", "i3", "i4", "i5", "i6"),
+        n_min=1,
+        n_max=None,
+        pa_iter=80,
+        random_state=7,
+    )
+    result = suggest_n_factors(data, config)
+    assert result.n_max == 5
+
+
+def test_suggest_n_factors_rejects_n_max_not_smaller_than_items() -> None:
+    data = _synthetic_efa_data()
+    config = FactorSelectionConfig(
+        items=("i1", "i2", "i3", "i4", "i5", "i6"),
+        n_min=1,
+        n_max=6,
+    )
+    with pytest.raises(ValueError, match="smaller than number of items"):
+        suggest_n_factors(data, config)
+
+
+def test_suggest_n_factors_rejects_invalid_n_min() -> None:
+    data = _synthetic_efa_data()
+    config = FactorSelectionConfig(
+        items=("i1", "i2", "i3", "i4", "i5", "i6"),
+        n_min=0,
+        n_max=4,
+    )
+    with pytest.raises(ValueError, match="`n_min` must be >= 1"):
+        suggest_n_factors(data, config)
+
+
+def test_suggest_n_factors_rejects_non_positive_pa_iter() -> None:
+    data = _synthetic_efa_data()
+    config = FactorSelectionConfig(
+        items=("i1", "i2", "i3", "i4", "i5", "i6"),
+        n_min=1,
+        n_max=4,
+        pa_iter=0,
+    )
+    with pytest.raises(ValueError, match="`pa_iter` must be > 0"):
+        suggest_n_factors(data, config)
+
+
+def test_suggest_n_factors_rejects_invalid_pa_percentile() -> None:
+    data = _synthetic_efa_data()
+    config = FactorSelectionConfig(
+        items=("i1", "i2", "i3", "i4", "i5", "i6"),
+        n_min=1,
+        n_max=4,
+        pa_percentile=1.5,
+    )
+    with pytest.raises(ValueError, match="`pa_percentile`"):
+        suggest_n_factors(data, config)
+
+
+def test_suggest_n_factors_rejects_invalid_consensus_weight_key() -> None:
+    data = _synthetic_efa_data()
+    config = FactorSelectionConfig(
+        items=("i1", "i2", "i3", "i4", "i5", "i6"),
+        n_min=1,
+        n_max=4,
+        consensus_strategy="weighted_vote",
+        consensus_weights={"": 1.0},
+    )
+    with pytest.raises(ValueError, match="non-empty strings"):
+        suggest_n_factors(data, config)
+
+
+def test_suggest_n_factors_dropna_false_rejects_missing_values() -> None:
+    data = _synthetic_efa_data()
+    data.loc[0, "i1"] = np.nan
+    config = FactorSelectionConfig(
+        items=("i1", "i2", "i3", "i4", "i5", "i6"),
+        n_min=1,
+        n_max=4,
+        dropna=False,
+    )
+    with pytest.raises(ValueError, match="Missing values detected"):
+        suggest_n_factors(data, config)
+
+
+def test_suggest_n_factors_rejects_single_item_input() -> None:
+    rng = np.random.default_rng(123)
+    data = pd.DataFrame({"i1": rng.normal(size=200)})
+    config = FactorSelectionConfig(items=("i1",), n_min=1, n_max=1)
+    with pytest.raises(ValueError, match="At least 2 items"):
+        suggest_n_factors(data, config)

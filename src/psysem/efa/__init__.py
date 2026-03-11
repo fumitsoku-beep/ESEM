@@ -3,6 +3,8 @@ from .contracts import (
     EFADiagnosticsResult,
     EFAEvaluationConfig,
     EFAEvaluationResult,
+    EFAInterpretationConfig,
+    EFAInterpretationResult,
     EFAWorkflowConfig,
     EFAWorkflowResult,
     FactorSelectionConfig,
@@ -19,6 +21,7 @@ from .fit import (
     register_extraction_method,
     register_rotation_method,
 )
+from .interpretation import interpret_efa
 from .n_factors import suggest_n_factors
 from .workflow import run_efa_workflow
 
@@ -28,6 +31,8 @@ __all__ = [
     "EFADiagnosticsResult",
     "EFAEvaluationConfig",
     "EFAEvaluationResult",
+    "EFAInterpretationConfig",
+    "EFAInterpretationResult",
     "EFAResult",
     "EFAWorkflowConfig",
     "EFAWorkflowResult",
@@ -37,6 +42,7 @@ __all__ = [
     "fit_efa",
     "list_extraction_methods",
     "list_rotation_methods",
+    "interpret_efa",
     "register_extraction_method",
     "register_rotation_method",
     "run_efa_diagnostics",

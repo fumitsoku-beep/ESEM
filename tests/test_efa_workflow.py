@@ -5,6 +5,7 @@ import pytest
 from psysem import (
     EFADiagnosticsConfig,
     EFAEvaluationConfig,
+    EFAInterpretationConfig,
     EFAWorkflowConfig,
     FactorSelectionConfig,
     run_efa_workflow,
@@ -48,6 +49,10 @@ def test_run_efa_workflow_selection_union_smoke() -> None:
     assert not result.comparison_table.empty
     assert "score" in result.comparison_table.columns
     assert set(result.candidate_results) == set(result.candidate_evaluations)
+    assert set(result.candidate_results) == set(result.candidate_interpretations)
+    assert result.best_interpretation is not None
+    assert not result.best_interpretation.item_table.empty
+    assert not result.best_interpretation.factor_table.empty
 
 
 def test_run_efa_workflow_range_strategy_uses_full_range() -> None:
@@ -87,3 +92,92 @@ def test_run_efa_workflow_rejects_out_of_range_manual_candidate() -> None:
     )
     with pytest.raises(ValueError, match="outside"):
         run_efa_workflow(data, config)
+
+
+def test_run_efa_workflow_can_disable_interpretation() -> None:
+    data = _synthetic_efa_data()
+    config = EFAWorkflowConfig(
+        items=("i1", "i2", "i3", "i4", "i5", "i6"),
+        diagnostics=EFADiagnosticsConfig(items=()),
+        selection=FactorSelectionConfig(items=(), n_min=1, n_max=3, pa_iter=80, random_state=42),
+        evaluation=EFAEvaluationConfig(),
+        include_interpretation=False,
+    )
+    result = run_efa_workflow(data, config)
+    assert result.candidate_interpretations == {}
+    assert result.best_interpretation is None
+
+
+def test_run_efa_workflow_rejects_non_integer_manual_candidate() -> None:
+    data = _synthetic_efa_data()
+    config = EFAWorkflowConfig(
+        items=("i1", "i2", "i3", "i4", "i5", "i6"),
+        diagnostics=EFADiagnosticsConfig(items=()),
+        selection=FactorSelectionConfig(items=(), n_min=1, n_max=3),
+        evaluation=EFAEvaluationConfig(),
+        manual_candidates=(2, "3"),  # type: ignore[arg-type]
+    )
+    with pytest.raises(ValueError, match="must contain integers"):
+        run_efa_workflow(data, config)
+
+
+def test_run_efa_workflow_rejects_diagnostics_items_mismatch() -> None:
+    data = _synthetic_efa_data()
+    config = EFAWorkflowConfig(
+        items=("i1", "i2", "i3", "i4", "i5", "i6"),
+        diagnostics=EFADiagnosticsConfig(items=("i1", "i2")),
+        selection=FactorSelectionConfig(items=(), n_min=1, n_max=3),
+        evaluation=EFAEvaluationConfig(),
+    )
+    with pytest.raises(ValueError, match="diagnostics.items"):
+        run_efa_workflow(data, config)
+
+
+def test_run_efa_workflow_rejects_selection_items_mismatch() -> None:
+    data = _synthetic_efa_data()
+    config = EFAWorkflowConfig(
+        items=("i1", "i2", "i3", "i4", "i5", "i6"),
+        diagnostics=EFADiagnosticsConfig(items=()),
+        selection=FactorSelectionConfig(items=("i1", "i2"), n_min=1, n_max=3),
+        evaluation=EFAEvaluationConfig(),
+    )
+    with pytest.raises(ValueError, match="selection.items"):
+        run_efa_workflow(data, config)
+
+
+def test_run_efa_workflow_best_interpretation_matches_best_model() -> None:
+    data = _synthetic_efa_data()
+    result = run_efa_workflow(
+        data,
+        EFAWorkflowConfig(
+            items=("i1", "i2", "i3", "i4", "i5", "i6"),
+            diagnostics=EFADiagnosticsConfig(items=()),
+            selection=FactorSelectionConfig(items=(), n_min=1, n_max=4, pa_iter=120, random_state=42),
+            evaluation=EFAEvaluationConfig(),
+            interpretation=EFAInterpretationConfig(residual_top_n=5),
+            include_interpretation=True,
+        ),
+    )
+    assert result.best_interpretation is not None
+    assert result.best_interpretation is result.candidate_interpretations[result.best_n_factors]
+    assert result.best_interpretation.item_table.shape[0] == len(result.best_model.loadings.index)
+
+
+def test_run_efa_workflow_comparison_table_sorted_by_score_desc_then_n_factors() -> None:
+    data = _synthetic_efa_data()
+    result = run_efa_workflow(
+        data,
+        EFAWorkflowConfig(
+            items=("i1", "i2", "i3", "i4", "i5", "i6"),
+            diagnostics=EFADiagnosticsConfig(items=()),
+            selection=FactorSelectionConfig(items=(), n_min=1, n_max=4, pa_iter=120, random_state=42),
+            evaluation=EFAEvaluationConfig(),
+            candidate_strategy="range",
+        ),
+    )
+    expected = result.comparison_table.sort_values(
+        by=["score", "n_factors"],
+        ascending=[False, True],
+        kind="stable",
+    ).reset_index(drop=True)
+    assert result.comparison_table.reset_index(drop=True).equals(expected)
