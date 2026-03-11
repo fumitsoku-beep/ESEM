@@ -21,6 +21,11 @@ def test_build_structural_design_smoke() -> None:
     assert int(design.gamma_parameter_index.loc["eta2", "eta1"]) == 1
     assert int(design.gamma_parameter_index.loc["eta2", "z1"]) == 2
     assert int(design.beta_parameter_index.loc["eta2", "eta2"]) == 0
+    assert design.psi_matrix.shape == (1, 1)
+    assert pd.isna(design.psi_matrix.loc["eta2", "eta2"])
+    assert int(design.psi_parameter_index.loc["eta2", "eta2"]) == 3
+    assert len(design.disturbance_parameters) == 1
+    assert design.disturbance_parameters[0].latent == "eta2"
 
 
 def test_build_structural_design_warns_cycle() -> None:
@@ -60,6 +65,9 @@ def test_build_structural_design_with_parameter_table_uses_given_indices() -> No
         {
             "relation_index": 2,
             "term_index": 1,
+            "lhs": "y",
+            "operator": "~",
+            "rhs": "eta",
             "is_free": True,
             "parameter": "a",
             "parameter_index": 10,
@@ -69,6 +77,9 @@ def test_build_structural_design_with_parameter_table_uses_given_indices() -> No
         {
             "relation_index": 2,
             "term_index": 2,
+            "lhs": "y",
+            "operator": "~",
+            "rhs": "x1",
             "is_free": False,
             "parameter": None,
             "parameter_index": None,
@@ -78,6 +89,9 @@ def test_build_structural_design_with_parameter_table_uses_given_indices() -> No
         {
             "relation_index": 2,
             "term_index": 3,
+            "lhs": "y",
+            "operator": "~",
+            "rhs": "x2",
             "is_free": True,
             "parameter": "p1",
             "parameter_index": 11,
@@ -90,6 +104,46 @@ def test_build_structural_design_with_parameter_table_uses_given_indices() -> No
     assert free_indices == [10, 11]
     free_positions = [item.vector_position for item in design.path_table if item.is_free]
     assert free_positions == [0, 1]
+    assert len(design.disturbance_parameters) == 0
+
+
+def test_build_structural_design_uses_psi_rows_from_parameter_table() -> None:
+    spec = parse_model(
+        "eta1 =~ x1 + x2 + x3\n"
+        "eta2 =~ y1 + y2 + y3\n"
+        "eta2 ~ eta1"
+    )
+    parameter_table = (
+        {
+            "relation_index": 3,
+            "term_index": 1,
+            "lhs": "eta2",
+            "operator": "~",
+            "rhs": "eta1",
+            "is_free": True,
+            "parameter": "b1",
+            "parameter_index": 5,
+            "vector_position": 2,
+            "fixed_value": None,
+        },
+        {
+            "relation_index": 4,
+            "term_index": 1,
+            "lhs": "eta2",
+            "operator": "~~",
+            "rhs": "eta2",
+            "is_free": True,
+            "parameter": "psi_eta2",
+            "parameter_index": 9,
+            "vector_position": 8,
+            "fixed_value": None,
+        },
+    )
+    design = build_structural_design(spec, parameter_table=parameter_table)
+    assert int(design.gamma_parameter_index.loc["eta2", "eta1"]) == 5
+    assert int(design.psi_parameter_index.loc["eta2", "eta2"]) == 9
+    assert len(design.disturbance_parameters) == 1
+    assert design.disturbance_parameters[0].vector_position == 8
 
 
 def test_check_structural_validity_reports_empty_paths() -> None:

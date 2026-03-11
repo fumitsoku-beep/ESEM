@@ -49,7 +49,8 @@ class SEMResult:
             lines.append(
                 "Structural design: "
                 f"{len(self.structural_design.path_table)} paths / "
-                f"{len(self.structural_design.endogenous_latent_variables)} latent endogenous"
+                f"{len(self.structural_design.endogenous_latent_variables)} latent endogenous / "
+                f"{len(self.structural_design.disturbance_parameters)} disturbances"
             )
 
         if self.optimization_info:

@@ -23,6 +23,20 @@ class StructuralPath:
 
 
 @dataclass(frozen=True)
+class StructuralDisturbance:
+    """One latent disturbance variance parameter entry."""
+
+    latent: str
+    is_free: bool
+    parameter: str | None
+    parameter_index: int | None
+    vector_position: int | None
+    fixed_value: float | None
+    relation_index: int
+    term_index: int
+
+
+@dataclass(frozen=True)
 class StructuralDesign:
     """Structural-layer matrix representation for SEM."""
 
@@ -35,4 +49,7 @@ class StructuralDesign:
     beta_parameter_index: pd.DataFrame
     gamma_matrix: pd.DataFrame
     gamma_parameter_index: pd.DataFrame
+    psi_matrix: pd.DataFrame
+    psi_parameter_index: pd.DataFrame
+    disturbance_parameters: tuple[StructuralDisturbance, ...] = field(default_factory=tuple)
     warnings: tuple[str, ...] = field(default_factory=tuple)

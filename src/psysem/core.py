@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from .data import ESEMSpec
+from .estimation import build_ml_context
 from .model import ModelSpec, parse_model
 from .model import model_spec_from_esem_spec
 from .measurement import MeasurementDesign, build_measurement_design, check_measurement_identification
@@ -61,6 +62,20 @@ class SEMModel:
             optimization_info["n_structural_paths"] = len(structural_design.path_table)
             optimization_info["n_structural_endogenous_latent"] = len(
                 structural_design.endogenous_latent_variables
+            )
+            optimization_info["n_structural_disturbance_parameters"] = len(
+                structural_design.disturbance_parameters
+            )
+
+        if estimator in {"ml", "mlr"}:
+            ml_context = build_ml_context(data, observed_variables=model_spec.observed_variables)
+            warnings.extend(ml_context.warnings)
+            optimization_info["ml_n_sample_observed"] = len(ml_context.observed_variables)
+            optimization_info["ml_has_sample_covariance"] = ml_context.sample_covariance is not None
+            optimization_info["ml_objective_at_sample_cov"] = (
+                ml_context.objective_at_sample_cov
+                if ml_context.objective_at_sample_cov is not None
+                else float("nan")
             )
 
         return SEMResult(
@@ -147,6 +162,27 @@ def _build_parameter_table(model_spec: ModelSpec) -> tuple[dict[str, Any], ...]:
                     "parameter_index": parameter_index,
                 }
             )
+
+    relation_count = len(model_spec.relations)
+    for offset, latent in enumerate(_collect_endogenous_latent_for_disturbance(model_spec), start=1):
+        parameter_index = next_parameter_index
+        parameter_name = f"p{unnamed_counter}"
+        next_parameter_index += 1
+        unnamed_counter += 1
+        rows.append(
+            {
+                "relation_index": relation_count + offset,
+                "term_index": 1,
+                "lhs": latent,
+                "operator": "~~",
+                "rhs": latent,
+                "label": None,
+                "fixed_value": None,
+                "is_free": True,
+                "parameter": parameter_name,
+                "parameter_index": parameter_index,
+            }
+        )
     return tuple(rows)
 
 
@@ -195,3 +231,19 @@ def _try_build_structural_design(
     if not has_structural:
         return None
     return build_structural_design(model_spec, parameter_table=parameter_table)
+
+
+def _collect_endogenous_latent_for_disturbance(model_spec: ModelSpec) -> tuple[str, ...]:
+    latent_set = set(model_spec.latent_variables)
+    endogenous_latent: list[str] = []
+    seen: set[str] = set()
+    for relation in model_spec.relations:
+        if relation.operator != "~":
+            continue
+        if relation.lhs not in latent_set:
+            continue
+        if relation.lhs in seen:
+            continue
+        seen.add(relation.lhs)
+        endogenous_latent.append(relation.lhs)
+    return tuple(endogenous_latent)

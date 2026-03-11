@@ -23,7 +23,8 @@ def to_markdown(result: SEMResult) -> str:
         lines.append(
             "- Structural design: "
             f"`{len(result.structural_design.path_table)} paths / "
-            f"{len(result.structural_design.endogenous_latent_variables)} latent endogenous`"
+            f"{len(result.structural_design.endogenous_latent_variables)} latent endogenous / "
+            f"{len(result.structural_design.disturbance_parameters)} disturbances`"
         )
 
     if result.optimization_info:

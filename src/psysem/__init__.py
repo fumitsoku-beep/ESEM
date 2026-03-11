@@ -32,6 +32,7 @@ from .efa import (
     run_efa_workflow,
     suggest_n_factors,
 )
+from .estimation import MLEstimationContext, build_ml_context, gaussian_ml_discrepancy
 from .fit_indices import compute_basic_fit_indices
 from .invariance import InvarianceResult, test_measurement_invariance
 from .measurement import (
@@ -54,6 +55,7 @@ from .reporting import to_markdown
 from .result import SEMResult
 from .structural import (
     StructuralDesign,
+    StructuralDisturbance,
     StructuralPath,
     build_structural_design,
     check_structural_validity,
@@ -66,6 +68,7 @@ __all__ = [
     "build_structural_design",
     "check_measurement_identification",
     "check_structural_validity",
+    "build_ml_context",
     "EFAConfig",
     "EFADiagnosticsConfig",
     "EFADiagnosticsResult",
@@ -83,12 +86,14 @@ __all__ = [
     "FactorSelectionConfig",
     "FactorSelectionResult",
     "fit_efa",
+    "gaussian_ml_discrepancy",
     "InvarianceResult",
     "interpret_efa",
     "list_extraction_methods",
     "list_rotation_methods",
     "LoadingParameter",
     "MeasurementDesign",
+    "MLEstimationContext",
     "ModelConstraint",
     "ModelRelation",
     "ModelSpec",
@@ -108,6 +113,7 @@ __all__ = [
     "sem",
     "SpecValidationError",
     "StructuralDesign",
+    "StructuralDisturbance",
     "StructuralPath",
     "test_measurement_invariance",
     "to_markdown",

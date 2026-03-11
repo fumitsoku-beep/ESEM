@@ -89,6 +89,8 @@ def test_smoke_fit() -> None:
     assert result.estimator == "ml"
     assert result.model_spec is not None
     assert result.model_spec.source == "syntax"
+    assert result.optimization_info["ml_has_sample_covariance"] is True
+    assert "ml_objective_at_sample_cov" in result.optimization_info
 
 
 def test_sem_function() -> None:
@@ -250,6 +252,15 @@ def test_fit_attaches_structural_design_and_summary_markdown_show_it() -> None:
     assert len(result.structural_design.path_table) == 2
     assert int(result.structural_design.gamma_parameter_index.loc["eta2", "eta1"]) == 5
     assert int(result.structural_design.gamma_parameter_index.loc["eta2", "z1"]) == 6
+    assert int(result.structural_design.psi_parameter_index.loc["eta2", "eta2"]) == 7
+    psi_rows = [
+        row
+        for row in result.parameter_table
+        if row["operator"] == "~~" and row["lhs"] == "eta2" and row["rhs"] == "eta2"
+    ]
+    assert len(psi_rows) == 1
+    assert int(psi_rows[0]["parameter_index"]) == 7
+    assert result.optimization_info["n_structural_disturbance_parameters"] == 1
     summary = result.summary()
     report = to_markdown(result)
     assert "Structural design:" in summary

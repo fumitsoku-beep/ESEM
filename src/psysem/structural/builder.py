@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 
 from ..model import ModelSpec, RelationTerm
-from .contracts import StructuralDesign, StructuralPath
+from .contracts import StructuralDesign, StructuralDisturbance, StructuralPath
 
 
 def build_structural_design(
@@ -28,7 +28,7 @@ def build_structural_design(
     allowed = latent_set | observed_set
     parameter_lookup = _parameter_lookup(parameter_table)
     fallback_label_index: dict[str, int] = {}
-    fallback_next_index = 1
+    fallback_next_index = _infer_next_parameter_index(parameter_table, default=1)
 
     endogenous_latent: list[str] = []
     endogenous_latent_seen: set[str] = set()
@@ -112,6 +112,16 @@ def build_structural_design(
         gamma_columns,
         path_table,
     )
+    (
+        psi_matrix,
+        psi_parameter_index,
+        disturbance_parameters,
+        _,
+    ) = _build_psi_matrices(
+        endogenous_latent=endogenous_latent,
+        parameter_table=parameter_table,
+        next_parameter_index=fallback_next_index,
+    )
     warnings = _build_structural_warnings(
         path_table=path_table,
         endogenous_latent=endogenous_latent,
@@ -128,6 +138,9 @@ def build_structural_design(
         beta_parameter_index=beta_parameter_index,
         gamma_matrix=gamma_matrix,
         gamma_parameter_index=gamma_parameter_index,
+        psi_matrix=psi_matrix,
+        psi_parameter_index=psi_parameter_index,
+        disturbance_parameters=tuple(disturbance_parameters),
         warnings=tuple(warnings),
     )
 
@@ -226,6 +239,89 @@ def _build_gamma_parameter_index_matrix(
     return gamma_index
 
 
+def _build_psi_matrices(
+    *,
+    endogenous_latent: list[str],
+    parameter_table: tuple[dict[str, Any], ...] | None,
+    next_parameter_index: int,
+) -> tuple[pd.DataFrame, pd.DataFrame, list[StructuralDisturbance], int]:
+    psi_lookup = _psi_parameter_lookup(parameter_table)
+    has_parameter_table = parameter_table is not None
+    psi = pd.DataFrame(
+        0.0,
+        index=endogenous_latent,
+        columns=endogenous_latent,
+    )
+    psi_parameter_index = pd.DataFrame(
+        0,
+        index=endogenous_latent,
+        columns=endogenous_latent,
+        dtype=int,
+    )
+    disturbances: list[StructuralDisturbance] = []
+
+    for latent in endogenous_latent:
+        is_free: bool
+        parameter_name_value: str | None
+        parameter_index_value: int | None
+        vector_position_value: int | None
+        fixed_value_value: float | None
+        relation_index_value: int
+        term_index_value: int
+
+        meta = psi_lookup.get(latent)
+        if meta is None:
+            parameter_index_generated = next_parameter_index
+            is_free = True
+            parameter_name_value = f"p{parameter_index_generated}"
+            parameter_index_value = parameter_index_generated
+            vector_position_value = None if has_parameter_table else parameter_index_generated - 1
+            fixed_value_value = None
+            relation_index_value = 0
+            term_index_value = 0
+            psi.loc[latent, latent] = np.nan
+            psi_parameter_index.loc[latent, latent] = parameter_index_generated
+            next_parameter_index += 1
+        else:
+            (
+                is_free,
+                parameter_name_value,
+                parameter_index_value,
+                vector_position_value,
+                fixed_value_value,
+                relation_index_value,
+                term_index_value,
+            ) = meta
+            if is_free and parameter_index_value is None:
+                raise ValueError(f"Free Psi parameter for `{latent}` has no `parameter_index`.")
+            if not is_free and fixed_value_value is None:
+                raise ValueError(f"Fixed Psi parameter for `{latent}` has no fixed value.")
+            if is_free:
+                assert parameter_index_value is not None
+                psi.loc[latent, latent] = np.nan
+                psi_parameter_index.loc[latent, latent] = parameter_index_value
+                if parameter_name_value is None:
+                    parameter_name_value = f"p{parameter_index_value}"
+            else:
+                assert fixed_value_value is not None
+                psi.loc[latent, latent] = float(fixed_value_value)
+
+        disturbances.append(
+            StructuralDisturbance(
+                latent=latent,
+                is_free=is_free,
+                parameter=parameter_name_value,
+                parameter_index=parameter_index_value,
+                vector_position=vector_position_value,
+                fixed_value=fixed_value_value,
+                relation_index=relation_index_value,
+                term_index=term_index_value,
+            )
+        )
+
+    return psi, psi_parameter_index, disturbances, next_parameter_index
+
+
 def _build_structural_warnings(
     *,
     path_table: list[StructuralPath],
@@ -298,6 +394,38 @@ def _parameter_lookup(
     return lookup
 
 
+def _psi_parameter_lookup(
+    parameter_table: tuple[dict[str, Any], ...] | None,
+) -> dict[str, tuple[bool, str | None, int | None, int | None, float | None, int, int]]:
+    if parameter_table is None:
+        return {}
+
+    lookup: dict[str, tuple[bool, str | None, int | None, int | None, float | None, int, int]] = {}
+    for row in parameter_table:
+        operator = row.get("operator")
+        lhs = row.get("lhs")
+        rhs = row.get("rhs")
+        if operator != "~~":
+            continue
+        if not isinstance(lhs, str) or not isinstance(rhs, str) or lhs != rhs:
+            continue
+        latent = lhs
+        if latent in lookup:
+            raise ValueError(f"Duplicate Psi parameter row found for `{latent}`.")
+        fixed_raw = row["fixed_value"]
+        vector_position = row.get("vector_position")
+        lookup[latent] = (
+            bool(row["is_free"]),
+            row["parameter"] if isinstance(row["parameter"], str) else None,
+            int(row["parameter_index"]) if isinstance(row["parameter_index"], int) else None,
+            int(vector_position) if isinstance(vector_position, int) else None,
+            float(fixed_raw) if isinstance(fixed_raw, (int, float)) else None,
+            int(row["relation_index"]),
+            int(row["term_index"]),
+        )
+    return lookup
+
+
 def _fallback_parameter_meta(
     *,
     term: RelationTerm,
@@ -318,3 +446,18 @@ def _fallback_parameter_meta(
 
     index = next_parameter_index
     return True, f"p{index}", index, index - 1, None, next_parameter_index + 1
+
+
+def _infer_next_parameter_index(
+    parameter_table: tuple[dict[str, Any], ...] | None,
+    *,
+    default: int,
+) -> int:
+    if parameter_table is None:
+        return default
+    max_index = 0
+    for row in parameter_table:
+        parameter_index = row.get("parameter_index")
+        if isinstance(parameter_index, int):
+            max_index = max(max_index, parameter_index)
+    return max(default, max_index + 1)
