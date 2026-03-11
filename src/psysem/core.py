@@ -7,6 +7,7 @@ import numpy as np
 
 from .data import ESEMSpec
 from .estimation import (
+    SEMFitConfig,
     build_implied_covariance,
     build_ml_context,
     gaussian_ml_discrepancy,
@@ -32,7 +33,13 @@ class SEMModel:
     def __init__(self, syntax: str | None = None):
         self.spec: ModelSpec | None = parse_model(syntax) if syntax is not None else None
 
-    def fit(self, data: Any, *, spec: ESEMSpec | None = None) -> SEMResult:
+    def fit(
+        self,
+        data: Any,
+        *,
+        spec: ESEMSpec | None = None,
+        fit_config: SEMFitConfig | None = None,
+    ) -> SEMResult:
         """Fit model to data and return placeholder result.
 
         Parameters
@@ -45,6 +52,9 @@ class SEMModel:
         """
         n_obs = _resolve_n_obs(data)
         model_spec = self._resolve_model_spec(spec)
+        if fit_config is not None and not isinstance(fit_config, SEMFitConfig):
+            raise TypeError("`fit_config` must be a SEMFitConfig instance or None.")
+        resolved_fit_config = SEMFitConfig() if fit_config is None else fit_config
         estimator = (model_spec.estimator or "ml").lower()
         raw_parameter_table = _build_parameter_table(model_spec)
         parameter_index_map = build_parameter_index_map(raw_parameter_table)
@@ -67,6 +77,11 @@ class SEMModel:
             "objective": float("nan"),
             "n_free_parameters": parameter_index_map.n_free,
             "n_constraints": len(model_spec.constraints),
+            "fit_method": resolved_fit_config.method,
+            "fit_max_iter": resolved_fit_config.max_iter,
+            "fit_tol": resolved_fit_config.tol,
+            "fit_restarts": resolved_fit_config.restarts,
+            "fit_random_start_scale": resolved_fit_config.random_start_scale,
         }
         if measurement_design is not None:
             optimization_info["n_measurement_latent"] = len(measurement_design.latent_variables)
@@ -104,6 +119,7 @@ class SEMModel:
                     structural_design=structural_design,
                     parameter_index_map=parameter_index_map,
                     parameter_table=parameter_table,
+                    fit_config=resolved_fit_config,
                 )
                 warnings.extend(ml_optimization.warnings)
                 optimization_info["ml_optimized"] = True
@@ -116,6 +132,15 @@ class SEMModel:
                     else float("nan")
                 )
                 optimization_info["ml_n_optimized_observed"] = len(ml_optimization.observed_variables)
+                optimization_info["ml_n_attempts"] = ml_optimization.n_attempts
+                optimization_info["ml_best_attempt"] = (
+                    ml_optimization.best_attempt if ml_optimization.best_attempt is not None else -1
+                )
+                optimization_info["ml_method"] = ml_optimization.method or resolved_fit_config.method
+                if ml_optimization.failure_category is not None:
+                    optimization_info["ml_failure_category"] = ml_optimization.failure_category
+                if ml_optimization.failure_reason is not None:
+                    optimization_info["ml_failure_reason"] = ml_optimization.failure_reason
                 if ml_optimization.parameter_values:
                     parameters = {
                         name: ml_optimization.parameter_values.get(name, value)
@@ -230,9 +255,14 @@ class SEMModel:
         return self.spec
 
 
-def sem(syntax: str, data: Any) -> SEMResult:
+def sem(
+    syntax: str,
+    data: Any,
+    *,
+    fit_config: SEMFitConfig | None = None,
+) -> SEMResult:
     """Convenience API for one-off model fitting."""
-    return SEMModel(syntax).fit(data)
+    return SEMModel(syntax).fit(data, fit_config=fit_config)
 
 
 def _resolve_n_obs(data: Any) -> int:

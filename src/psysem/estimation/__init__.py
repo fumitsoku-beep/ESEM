@@ -1,4 +1,9 @@
-from .contracts import MLEstimationContext, MLOptimizationResult
+from .contracts import (
+    MLEstimationContext,
+    MLOptimizationResult,
+    ParameterBoundsConfig,
+    SEMFitConfig,
+)
 from .ml import (
     build_implied_covariance,
     build_ml_context,
@@ -11,6 +16,8 @@ from .ml import (
 __all__ = [
     "MLEstimationContext",
     "MLOptimizationResult",
+    "ParameterBoundsConfig",
+    "SEMFitConfig",
     "build_implied_covariance",
     "build_ml_context",
     "build_start_vector",

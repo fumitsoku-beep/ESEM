@@ -6,7 +6,7 @@
 当前日期：2026-03-11  
 适用分支：`main`
 
-执行进度（更新）：Phase A 已落地；Phase B 已启动并落地首批（基础拟合指标已接入 `fit`）。
+执行进度（更新）：Phase A 已落地；Phase B 已落地首批；Phase C 已启动并落地首批（`SEMFitConfig` + 重启策略 + 失败分类诊断）。
 
 ---
 
@@ -18,13 +18,13 @@
 2. 矩阵草图：measurement(`Lambda/Theta`) + structural(`Beta/Gamma/Psi`) 已可构建。  
 3. 参数映射：全局 `parameter_index -> vector_position` 已统一。  
 4. ML 原型：`build_implied_covariance` + `optimize_ml_parameters` 已接入 `SEMModel.fit`。  
-5. 质量状态：`ruff + mypy + pytest` 全绿（当前 `137` tests）。
+5. 质量状态：`ruff + mypy + pytest` 全绿（当前 `142` tests）。
 
 当前关键缺口：
 
 1. 推断层仍需稳健化：当前为数值 Hessian 原型，精度与异常场景覆盖待增强。  
 2. 拟合指标仍需完善：当前已实现基础版，但边界场景与稳健版本（如 robust 统计量）待补齐。  
-3. 优化鲁棒性不足：当前仍是原型级初值/边界/失败诊断。  
+3. 优化鲁棒性仍需增强：已支持配置对象/重启/失败分类，但高级容错与更多数值场景待补齐。  
 4. 高级路径未覆盖：`MLR/WLSMV`、多组不变性、完整端到端数值回归。
 
 ---
@@ -132,6 +132,12 @@
 2. `src/psysem/core.py`
 3. `tests/test_sem_estimation_config.py`（新建）
 
+当前进展（2026-03-11）：
+
+1. `SEMFitConfig` 与 `ParameterBoundsConfig` 已落地。  
+2. `SEMModel.fit(..., fit_config=...)` 已接入。  
+3. `optimization_info` 已回写配置参数与尝试统计（如 `ml_n_attempts`）。
+
 ### C2. 增加失败诊断与容错
 
 实现内容：
@@ -144,6 +150,12 @@
 
 1. 常见失败场景可复现并有明确诊断。  
 2. 重启策略可提高成功率且有测试断言。
+
+当前进展（2026-03-11）：
+
+1. `optimize_ml_parameters` 已支持多起点重启。  
+2. 失败分类已落地基础版（如 `convergence/bounds/implied_covariance/matrix_singularity/specification`）。  
+3. `tests/test_sem_estimation_config.py` 已覆盖重启与失败分类路径。
 
 ---
 

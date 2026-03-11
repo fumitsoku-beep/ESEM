@@ -5,7 +5,7 @@
 当前日期：2026-03-11  
 适用分支：`main`
 
-实现状态：Phase 1 已完成基础版；Phase 2 已完成第二批；Phase 3 已落地第六批（`Beta/Gamma/Psi` 草图 + 循环依赖基础检查 + 统一参数索引映射 + ML implied covariance/优化原型 + 数值推断原型 + 基础拟合指标原型）；估计器仍为占位。
+实现状态：Phase 1 已完成基础版；Phase 2 已完成第二批；Phase 3 已落地第七批（`Beta/Gamma/Psi` 草图 + 循环依赖基础检查 + 统一参数索引映射 + ML implied covariance/优化原型 + 数值推断原型 + 基础拟合指标原型 + 优化鲁棒性原型）；估计器仍为占位。
 
 ---
 
@@ -15,7 +15,7 @@
 | --- | --- | --- | --- |
 | Phase 1 | 入口与契约统一 | `ModelSpec` 扩展、`fit(data, spec=...)`、严格语法校验、标准结果字段 | 已完成（基础版） |
 | Phase 2 | 测量层矩阵构建 | measurement block 组装、识别性检查、参数索引 | 进行中（第二批已完成） |
-| Phase 3 | 结构层 + ML 估计闭环 | structural 路径映射、目标函数、优化、SE 与基础 fit 指标 | 进行中（第五批已完成） |
+| Phase 3 | 结构层 + ML 估计闭环 | structural 路径映射、目标函数、优化、SE 与基础 fit 指标 | 进行中（第七批已完成） |
 | Phase 4（可选） | 高级能力与性能优化 | MLR/WLSMV、多组与不变性、bootstrap、报告增强 | 可选 |
 
 ---
@@ -32,7 +32,7 @@
 当前缺口：
 
 1. 无正式语法树（AST）和参数约束表达。  
-2. measurement/structural 矩阵层已起步，但估计闭环尚未实现。  
+2. measurement/structural 矩阵层已起步，稳健估计闭环尚未完善。  
 3. ML、推断与基础拟合指标已起步原型，但 MLR/WLSMV 与稳健统计尚未完成。  
 4. 无端到端 SEM 数值回归测试。  
 
@@ -57,7 +57,7 @@ Phase 2 已落地（第二批）：
 3. 支持多 block 组装映射（`block_latent_pairs`）。  
 4. measurement 层加载参数与全局 `parameter_table` 索引已对齐。  
 
-Phase 3 已落地（第六批）：
+Phase 3 已落地（第七批）：
 
 1. 新增 `structural` 模块，支持 structural path table 构建。  
 2. 产出 `Beta/Gamma` 矩阵草图（用于后续估计层输入）。  
@@ -71,6 +71,7 @@ Phase 3 已落地（第六批）：
 10. measurement 增加 `Theta` 参数索引矩阵，观测残差方差可映射到全局参数向量。  
 11. 新建 `inference` 模块，落地数值 Hessian 推断原型（SE/z/p/CI）并接入 `SEMModel.fit`。  
 12. `fit_indices` 升级为基础可计算版本（AIC/BIC/SRMR/CFI/TLI/RMSEA）并接入 `SEMModel.fit`。  
+13. 引入 `SEMFitConfig` / `ParameterBoundsConfig`，支持拟合配置、重启策略与失败分类诊断。  
 
 ---
 

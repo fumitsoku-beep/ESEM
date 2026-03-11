@@ -17,7 +17,7 @@
 | --- | --- | --- |
 | `psysem.data` | 可用 | `spec` 解析 + 规则校验 + 与 `DataFrame` 对齐校验 |
 | `psysem.efa` | 可用（Phase 3 进行中） | `PAF/PCA`、KMO/Bartlett、PA/MAP/Scree/Kaiser、候选拟合评分与最优因子数选择 + 模块化解释输出 |
-| `SEMModel` | Phase 1 完成基础版 + Phase 2/3 起步 | 结构化解析 + 参数表草稿 + measurement(`Lambda/Theta`)/structural(`Beta/Gamma/Psi`) 矩阵草图 + 全局参数索引映射 + ML 优化原型 + 推断原型（SE/z/p/CI）+ 拟合指标原型（AIC/BIC/SRMR/CFI/TLI/RMSEA）；估计器仍为占位 |
+| `SEMModel` | Phase 1 完成基础版 + Phase 2/3 起步 | 结构化解析 + 参数表草稿 + measurement(`Lambda/Theta`)/structural(`Beta/Gamma/Psi`) 矩阵草图 + 全局参数索引映射 + ML 优化原型 + 推断原型（SE/z/p/CI）+ 拟合指标原型（AIC/BIC/SRMR/CFI/TLI/RMSEA）+ 拟合配置原型（`SEMFitConfig`/重启/失败分类诊断）；估计器仍为占位 |
 | `psysem.esem_spec` | 兼容层 | 旧导入路径，内部已转发到 `psysem.data` |
 
 ---
@@ -56,7 +56,7 @@ python -m pytest -q
 
 ## EFA 测试与质量门禁（2026-03-11）
 
-当前仓库测试数量：`137`（其中 EFA 相关测试 `67`）。
+当前仓库测试数量：`142`（其中 EFA 相关测试 `67`）。
 
 EFA 已覆盖以下测试层级：
 
@@ -98,6 +98,21 @@ data = pd.DataFrame(
 model = SEMModel("y ~ x1 + x2")
 result = model.fit(data)
 print(result.summary())
+```
+
+可选：传入 `SEMFitConfig` 调整优化参数（Phase C 原型）。
+
+```python
+from psysem import SEMFitConfig
+
+fit_config = SEMFitConfig(
+    max_iter=300,
+    tol=1e-7,
+    restarts=2,
+    random_seed=42,
+)
+result = model.fit(data, fit_config=fit_config)
+print(result.optimization_info["ml_n_attempts"])
 ```
 
 ### 2) ESEM `spec` 解析与校验（`data` 模块）
@@ -621,7 +636,7 @@ src/psysem/
 
 - [x] 新建 `psysem.estimation`：已落地 ML 原型（`gaussian_ml_discrepancy` + implied covariance + `optimize_ml_parameters`）；MLR/WLSMV 待扩展
 - [x] 新建 `psysem.inference`：已落地数值 Hessian 推断原型（SE/z/p/CI）；稳健性与精度待增强
-- [ ] 收敛与数值稳定策略（初值、边界约束、容错与告警）
+- [x] 收敛与数值稳定策略基础版（`SEMFitConfig` + bounds + restarts + 失败分类告警）
 
 #### Phase 5: 指标与报告
 

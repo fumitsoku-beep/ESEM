@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass, replace
 import math
 from typing import Any
 
@@ -10,7 +11,12 @@ from scipy.optimize import minimize
 from ..measurement import MeasurementDesign
 from ..parameter_index import ParameterIndexMap
 from ..structural import StructuralDesign
-from .contracts import MLEstimationContext, MLOptimizationResult
+from .contracts import (
+    MLEstimationContext,
+    MLOptimizationResult,
+    ParameterBoundsConfig,
+    SEMFitConfig,
+)
 
 
 def gaussian_ml_discrepancy(
@@ -162,9 +168,11 @@ def optimize_ml_parameters(
     structural_design: StructuralDesign | None,
     parameter_index_map: ParameterIndexMap,
     parameter_table: tuple[dict[str, Any], ...],
-    max_iter: int = 200,
+    max_iter: int | None = None,
+    fit_config: SEMFitConfig | None = None,
 ) -> MLOptimizationResult:
     """Run prototype ML optimization for SEM parameters."""
+    resolved_config = _resolve_fit_config(max_iter=max_iter, fit_config=fit_config)
     if parameter_index_map.n_free == 0:
         return MLOptimizationResult(
             success=True,
@@ -173,6 +181,7 @@ def optimize_ml_parameters(
             objective=0.0,
             observed_variables=tuple(),
             parameter_vector=tuple(),
+            method=resolved_config.method,
         )
 
     context = build_ml_context(data, observed_variables=measurement_design.observed_variables)
@@ -185,14 +194,154 @@ def optimize_ml_parameters(
             objective=None,
             observed_variables=context.observed_variables,
             parameter_vector=tuple(),
+            method=resolved_config.method,
+            failure_category="data",
+            failure_reason="sample_covariance_unavailable",
             warnings=tuple(warnings),
         )
 
     sample_cov = context.sample_covariance
     x0 = build_start_vector(parameter_index_map, parameter_table=parameter_table)
-    bounds = _build_bounds(parameter_index_map, parameter_table=parameter_table)
+    bounds = _build_bounds(
+        parameter_index_map,
+        parameter_table=parameter_table,
+        bounds_config=resolved_config.bounds,
+    )
     latent_warnings = _structural_prototype_warnings(structural_design)
     warnings.extend(latent_warnings)
+
+    start_vectors = _build_restart_starts(
+        base=x0,
+        bounds=bounds,
+        restarts=resolved_config.restarts,
+        random_seed=resolved_config.random_seed,
+        random_start_scale=resolved_config.random_start_scale,
+    )
+
+    attempts: list[_AttemptResult] = []
+    for attempt_index, start in enumerate(start_vectors, start=1):
+        attempts.append(
+            _run_single_attempt(
+                attempt_index=attempt_index,
+                start_vector=start,
+                sample_covariance=sample_cov.to_numpy(dtype=float),
+                observed_variables=context.observed_variables,
+                measurement_design=measurement_design,
+                structural_design=structural_design,
+                parameter_index_map=parameter_index_map,
+                bounds=bounds,
+                fit_config=resolved_config,
+            )
+        )
+
+    selected = _select_best_attempt(attempts)
+    assert selected is not None  # start_vectors is guaranteed non-empty.
+
+    if selected.success and selected.attempt_index > 1:
+        warnings.append(f"ML optimization converged after restart attempt #{selected.attempt_index}.")
+    if not selected.success:
+        category = selected.failure_category or "convergence"
+        reason = selected.failure_reason or selected.message
+        warnings.append(
+            "ML optimization failed "
+            f"(category={category}, attempts={len(attempts)}): {reason}"
+        )
+
+    parameter_values = parameter_vector_to_named_values(selected.parameter_vector, parameter_index_map)
+
+    return MLOptimizationResult(
+        success=selected.success,
+        status=selected.status,
+        n_iter=selected.n_iter,
+        objective=selected.objective,
+        observed_variables=context.observed_variables,
+        parameter_vector=tuple(float(item) for item in selected.parameter_vector.tolist()),
+        parameter_values=parameter_values,
+        sample_covariance=sample_cov,
+        implied_covariance=selected.implied_covariance,
+        n_attempts=len(attempts),
+        best_attempt=selected.attempt_index,
+        method=resolved_config.method,
+        failure_category=None if selected.success else selected.failure_category,
+        failure_reason=None if selected.success else selected.failure_reason,
+        attempt_objectives=tuple(attempt.objective for attempt in attempts),
+        warnings=tuple(dict.fromkeys(warnings)),
+    )
+
+
+@dataclass(frozen=True)
+class _AttemptResult:
+    attempt_index: int
+    success: bool
+    status: str
+    n_iter: int
+    objective: float | None
+    parameter_vector: np.ndarray
+    implied_covariance: pd.DataFrame | None
+    message: str
+    failure_category: str | None
+    failure_reason: str | None
+
+
+def _resolve_fit_config(
+    *,
+    max_iter: int | None,
+    fit_config: SEMFitConfig | None,
+) -> SEMFitConfig:
+    if fit_config is None:
+        return SEMFitConfig(max_iter=200 if max_iter is None else int(max_iter))
+    if max_iter is None or max_iter == fit_config.max_iter:
+        return fit_config
+    return replace(fit_config, max_iter=int(max_iter))
+
+
+def _build_restart_starts(
+    *,
+    base: np.ndarray,
+    bounds: list[tuple[float | None, float | None]],
+    restarts: int,
+    random_seed: int | None,
+    random_start_scale: float,
+) -> list[np.ndarray]:
+    starts: list[np.ndarray] = [_apply_bounds_to_start(np.asarray(base, dtype=float), bounds)]
+    if restarts <= 0:
+        return starts
+
+    rng = np.random.default_rng(random_seed)
+    scale = random_start_scale * np.maximum(1.0, np.abs(base))
+    for _ in range(restarts):
+        perturbation = rng.normal(loc=0.0, scale=scale, size=base.shape)
+        trial = np.asarray(base + perturbation, dtype=float)
+        starts.append(_apply_bounds_to_start(trial, bounds))
+    return starts
+
+
+def _apply_bounds_to_start(
+    start: np.ndarray,
+    bounds: list[tuple[float | None, float | None]],
+) -> np.ndarray:
+    adjusted = np.asarray(start, dtype=float).copy()
+    for idx, (lower, upper) in enumerate(bounds):
+        if lower is not None and adjusted[idx] < lower:
+            adjusted[idx] = float(lower)
+        if upper is not None and adjusted[idx] > upper:
+            adjusted[idx] = float(upper)
+    return adjusted
+
+
+def _run_single_attempt(
+    *,
+    attempt_index: int,
+    start_vector: np.ndarray,
+    sample_covariance: np.ndarray,
+    observed_variables: tuple[str, ...],
+    measurement_design: MeasurementDesign,
+    structural_design: StructuralDesign | None,
+    parameter_index_map: ParameterIndexMap,
+    bounds: list[tuple[float | None, float | None]],
+    fit_config: SEMFitConfig,
+) -> _AttemptResult:
+    objective_errors: list[Exception] = []
 
     def objective_fn(x: np.ndarray) -> float:
         try:
@@ -201,55 +350,118 @@ def optimize_ml_parameters(
                 x,
                 parameter_index_map,
                 structural_design=structural_design,
-                observed_variables=context.observed_variables,
+                observed_variables=observed_variables,
             )
-            return gaussian_ml_discrepancy(sample_cov.to_numpy(dtype=float), implied.to_numpy(dtype=float))
-        except Exception:
+            return gaussian_ml_discrepancy(sample_covariance, implied.to_numpy(dtype=float))
+        except Exception as exc:  # pragma: no cover - exception type depends on model shape.
+            objective_errors.append(exc)
             return 1e12
 
     raw_result = minimize(
         objective_fn,
-        x0,
-        method="L-BFGS-B",
+        np.asarray(start_vector, dtype=float),
+        method=fit_config.method,
         bounds=bounds,
-        options={"maxiter": int(max_iter)},
+        tol=fit_config.tol,
+        options={"maxiter": int(fit_config.max_iter), "ftol": fit_config.tol},
     )
+
     best_vector = np.asarray(raw_result.x, dtype=float)
     objective_value: float | None
     implied_covariance: pd.DataFrame | None
+    failure_category: str | None = None
+    failure_reason: str | None = None
     try:
         implied_covariance = build_implied_covariance(
             measurement_design,
             best_vector,
             parameter_index_map,
             structural_design=structural_design,
-            observed_variables=context.observed_variables,
+            observed_variables=observed_variables,
         )
         objective_value = gaussian_ml_discrepancy(
-            sample_cov.to_numpy(dtype=float),
+            sample_covariance,
             implied_covariance.to_numpy(dtype=float),
         )
     except Exception as exc:
-        warnings.append(f"Failed to evaluate implied covariance at optimizer solution: {exc}")
         implied_covariance = None
         objective_value = None
+        failure_category = _classify_failure_from_exception(exc)
+        failure_reason = str(exc)
 
     success = bool(raw_result.success) and objective_value is not None and math.isfinite(objective_value)
-    status = "converged" if success else f"failed: {raw_result.message}"
-    parameter_values = parameter_vector_to_named_values(best_vector, parameter_index_map)
+    message = str(raw_result.message)
+    if not success and failure_category is None:
+        if objective_errors:
+            failure_category = _classify_failure_from_exception(objective_errors[-1])
+            failure_reason = str(objective_errors[-1])
+        elif _hits_bounds(best_vector, bounds):
+            failure_category = "bounds"
+            failure_reason = "optimized parameters reached configured bounds."
+        else:
+            failure_category = "convergence"
+            failure_reason = message
 
-    return MLOptimizationResult(
+    status = "converged" if success else f"failed[{failure_category}]"
+    return _AttemptResult(
+        attempt_index=attempt_index,
         success=success,
         status=status,
         n_iter=int(getattr(raw_result, "nit", 0)),
         objective=objective_value,
-        observed_variables=context.observed_variables,
-        parameter_vector=tuple(float(item) for item in best_vector.tolist()),
-        parameter_values=parameter_values,
-        sample_covariance=sample_cov,
+        parameter_vector=best_vector,
         implied_covariance=implied_covariance,
-        warnings=tuple(dict.fromkeys(warnings)),
+        message=message,
+        failure_category=failure_category,
+        failure_reason=failure_reason,
     )
+
+
+def _select_best_attempt(attempts: list[_AttemptResult]) -> _AttemptResult | None:
+    if not attempts:
+        return None
+    successful = [
+        item
+        for item in attempts
+        if item.success and item.objective is not None and math.isfinite(item.objective)
+    ]
+    if successful:
+        return min(successful, key=_objective_key)
+
+    finite = [item for item in attempts if item.objective is not None and math.isfinite(item.objective)]
+    if finite:
+        return min(finite, key=_objective_key)
+    return attempts[0]
+
+
+def _objective_key(attempt: _AttemptResult) -> float:
+    if attempt.objective is None:
+        return float("inf")
+    return float(attempt.objective)
+
+
+def _classify_failure_from_exception(exc: Exception) -> str:
+    message = str(exc).lower()
+    if "invert" in message or "singular" in message or "non positive definite" in message:
+        return "matrix_singularity"
+    if "observed variables missing" in message or "shape" in message:
+        return "specification"
+    return "implied_covariance"
+
+
+def _hits_bounds(
+    parameter_vector: np.ndarray,
+    bounds: list[tuple[float | None, float | None]],
+    *,
+    tolerance: float = 1e-8,
+) -> bool:
+    for idx, (lower, upper) in enumerate(bounds):
+        value = float(parameter_vector[idx])
+        if lower is not None and value <= float(lower) + tolerance:
+            return True
+        if upper is not None and value >= float(upper) - tolerance:
+            return True
+    return False
 
 
 def build_start_vector(
@@ -424,27 +636,42 @@ def _build_bounds(
     parameter_index_map: ParameterIndexMap,
     *,
     parameter_table: tuple[dict[str, Any], ...],
+    bounds_config: ParameterBoundsConfig,
 ) -> list[tuple[float | None, float | None]]:
-    lower_by_index: dict[int, float | None] = {
-        entry.parameter_index: None for entry in parameter_index_map.entries
-    }
-    upper_by_index: dict[int, float | None] = {
-        entry.parameter_index: None for entry in parameter_index_map.entries
-    }
+    lower_by_index: dict[int, float | None] = {}
+    upper_by_index: dict[int, float | None] = {}
+    for entry in parameter_index_map.entries:
+        lower_by_index[entry.parameter_index] = bounds_config.default_lower
+        upper_by_index[entry.parameter_index] = bounds_config.default_upper
+
     for row in parameter_table:
         if not bool(row["is_free"]):
             continue
         parameter_index = row.get("parameter_index")
         if not isinstance(parameter_index, int):
             continue
-        operator = row.get("operator")
-        lhs = row.get("lhs")
-        rhs = row.get("rhs")
-        if operator == "~~" and isinstance(lhs, str) and isinstance(rhs, str) and lhs == rhs:
-            current = lower_by_index.get(parameter_index)
-            new_lower = 1e-6
-            lower_by_index[parameter_index] = (
-                new_lower if current is None else max(current, new_lower)
+        operator = str(row.get("operator"))
+        lhs = row.get("lhs") if isinstance(row.get("lhs"), str) else None
+        rhs = row.get("rhs") if isinstance(row.get("rhs"), str) else None
+        row_lower, row_upper = bounds_config.select(operator=operator, lhs=lhs, rhs=rhs)
+        lower_by_index[parameter_index] = _merge_lower_bound(
+            lower_by_index.get(parameter_index),
+            row_lower,
+        )
+        upper_by_index[parameter_index] = _merge_upper_bound(
+            upper_by_index.get(parameter_index),
+            row_upper,
+        )
+        merged_lower = lower_by_index.get(parameter_index)
+        merged_upper = upper_by_index.get(parameter_index)
+        if (
+            merged_lower is not None
+            and merged_upper is not None
+            and merged_lower > merged_upper
+        ):
+            raise ValueError(
+                "Invalid bounds after merging parameter roles: "
+                f"parameter_index={parameter_index}, lower={merged_lower}, upper={merged_upper}."
             )
 
     bounds: list[tuple[float | None, float | None]] = []
@@ -456,6 +683,22 @@ def _build_bounds(
             )
         )
     return bounds
+
+
+def _merge_lower_bound(current: float | None, candidate: float | None) -> float | None:
+    if current is None:
+        return candidate
+    if candidate is None:
+        return current
+    return max(current, candidate)
+
+
+def _merge_upper_bound(current: float | None, candidate: float | None) -> float | None:
+    if current is None:
+        return candidate
+    if candidate is None:
+        return current
+    return min(current, candidate)
 
 
 def _structural_prototype_warnings(structural_design: StructuralDesign | None) -> list[str]:
