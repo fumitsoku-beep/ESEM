@@ -209,6 +209,22 @@ print(workflow.best_n_factors)
 print(workflow.comparison_table[["n_factors", "score"]])
 ```
 
+`fit_efa` 当前结果字段：
+
+| 字段 | 说明 |
+| --- | --- |
+| `loadings` | 旋转载荷矩阵 |
+| `communalities` | 共同度（`h2`） |
+| `uniquenesses` | 唯一性（`u2`） |
+| `complexity` | 题项复杂度（R 风格 `com` 近似） |
+| `explained_variance` | 各因子解释方差 |
+| `correlation_matrix` | 输入相关矩阵 |
+| `residual_matrix` | 相关矩阵残差（观测 - 重构） |
+| `residual_summary` | 残差摘要（`rmsr` 等） |
+| `factor_correlation` | 因子相关矩阵（当前正交旋转为单位阵） |
+| `cross_loaded_items` | 交叉载荷题项列表（阈值 `0.30`） |
+| `warnings` | 解读告警（低共同度/高残差/交叉载荷等） |
+
 ---
 
 ## ESEM 输入契约（当前实现）

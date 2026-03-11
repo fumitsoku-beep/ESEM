@@ -24,12 +24,18 @@ class EFAResult:
     loadings: pd.DataFrame
     communalities: pd.Series
     uniquenesses: pd.Series
+    complexity: pd.Series
     explained_variance: pd.Series
     correlation_matrix: pd.DataFrame
+    residual_matrix: pd.DataFrame
+    residual_summary: dict[str, float]
+    factor_correlation: pd.DataFrame
     extraction: str
     rotation: str
     n_iter: int
     converged: bool
+    cross_loaded_items: tuple[str, ...]
+    warnings: tuple[str, ...]
 
 
 ExtractionOutput = tuple[NDArray[np.float64], NDArray[np.float64], int, bool]
@@ -68,19 +74,41 @@ def fit_efa(data: pd.DataFrame, config: EFAConfig) -> EFAResult:
     communalities = np.sum(rotated_loadings * rotated_loadings, axis=1)
     uniquenesses = np.clip(1.0 - communalities, config.min_uniqueness, 1.0)
     explained = np.sum(rotated_loadings * rotated_loadings, axis=0)
+    complexity = _compute_item_complexity(rotated_loadings)
+    residual = _residual_correlation(corr, rotated_loadings, uniquenesses)
+    residual_summary = _summarize_residuals(residual)
+    cross_loaded = _detect_cross_loaded_items(
+        rotated_loadings,
+        item_names=list(config.items),
+        threshold=0.30,
+    )
+    warnings = _build_interpretation_warnings(
+        uniquenesses=uniquenesses,
+        communalities=communalities,
+        cross_loaded=cross_loaded,
+        residual_summary=residual_summary,
+        min_uniqueness=config.min_uniqueness,
+    )
 
     factor_names = [f"F{i + 1}" for i in range(config.n_factors)]
     item_names = list(config.items)
+    factor_corr = np.eye(config.n_factors, dtype=float)
     return EFAResult(
         loadings=pd.DataFrame(rotated_loadings, index=item_names, columns=factor_names),
         communalities=pd.Series(communalities, index=item_names, name="communality"),
         uniquenesses=pd.Series(uniquenesses, index=item_names, name="uniqueness"),
+        complexity=pd.Series(complexity, index=item_names, name="complexity"),
         explained_variance=pd.Series(explained, index=factor_names, name="explained_variance"),
         correlation_matrix=pd.DataFrame(corr, index=item_names, columns=item_names),
+        residual_matrix=pd.DataFrame(residual, index=item_names, columns=item_names),
+        residual_summary=residual_summary,
+        factor_correlation=pd.DataFrame(factor_corr, index=factor_names, columns=factor_names),
         extraction=extraction,
         rotation=rotation,
         n_iter=n_iter,
         converged=converged,
+        cross_loaded_items=tuple(cross_loaded),
+        warnings=tuple(warnings),
     )
 
 
@@ -312,3 +340,82 @@ def _stabilize_correlation(corr: NDArray[np.float64]) -> NDArray[np.float64]:
     corr = (corr + corr.T) / 2.0
     np.fill_diagonal(corr, 1.0)
     return corr
+
+
+def _compute_item_complexity(loadings: NDArray[np.float64]) -> NDArray[np.float64]:
+    abs_loadings = np.abs(loadings)
+    sum_sq = np.sum(abs_loadings * abs_loadings, axis=1)
+    sum_fourth = np.sum(abs_loadings**4, axis=1)
+    return np.divide(
+        sum_sq * sum_sq,
+        sum_fourth,
+        out=np.ones_like(sum_sq),
+        where=sum_fourth > 1e-12,
+    )
+
+
+def _residual_correlation(
+    corr: NDArray[np.float64],
+    loadings: NDArray[np.float64],
+    uniquenesses: NDArray[np.float64],
+) -> NDArray[np.float64]:
+    reproduced = loadings @ loadings.T + np.diag(uniquenesses)
+    reproduced = (reproduced + reproduced.T) / 2.0
+    np.fill_diagonal(reproduced, 1.0)
+    residual = corr - reproduced
+    residual = (residual + residual.T) / 2.0
+    np.fill_diagonal(residual, 0.0)
+    return residual
+
+
+def _summarize_residuals(residual: NDArray[np.float64]) -> dict[str, float]:
+    p = residual.shape[0]
+    upper = np.triu_indices(p, k=1)
+    values = residual[upper]
+    abs_values = np.abs(values)
+    if values.size == 0:
+        return {
+            "rmsr": 0.0,
+            "mean_abs_residual": 0.0,
+            "max_abs_residual": 0.0,
+            "n_abs_gt_0_05": 0.0,
+            "n_abs_gt_0_10": 0.0,
+        }
+    return {
+        "rmsr": float(np.sqrt(np.mean(values * values))),
+        "mean_abs_residual": float(np.mean(abs_values)),
+        "max_abs_residual": float(np.max(abs_values)),
+        "n_abs_gt_0_05": float(np.sum(abs_values > 0.05)),
+        "n_abs_gt_0_10": float(np.sum(abs_values > 0.10)),
+    }
+
+
+def _detect_cross_loaded_items(
+    loadings: NDArray[np.float64],
+    *,
+    item_names: list[str],
+    threshold: float,
+) -> list[str]:
+    abs_loadings = np.abs(loadings)
+    mask = np.sum(abs_loadings >= threshold, axis=1) >= 2
+    return [name for name, flagged in zip(item_names, mask) if flagged]
+
+
+def _build_interpretation_warnings(
+    *,
+    uniquenesses: NDArray[np.float64],
+    communalities: NDArray[np.float64],
+    cross_loaded: list[str],
+    residual_summary: dict[str, float],
+    min_uniqueness: float,
+) -> list[str]:
+    warnings: list[str] = []
+    if np.any(uniquenesses <= min_uniqueness + 1e-9):
+        warnings.append("Boundary uniqueness detected; review possible Heywood-adjacent solution.")
+    if np.any(communalities < 0.20):
+        warnings.append("Low communality items detected (h2 < 0.20).")
+    if cross_loaded:
+        warnings.append(f"Cross-loaded items detected: {', '.join(cross_loaded)}.")
+    if residual_summary.get("rmsr", 0.0) > 0.08:
+        warnings.append("Residual RMSR is relatively high (> 0.08).")
+    return warnings

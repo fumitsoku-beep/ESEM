@@ -103,6 +103,16 @@ def main() -> None:
     print(workflow.comparison_table.to_string(index=False))
     print("\nExplained variance:")
     print(result.explained_variance.round(4).to_string())
+    print("\nComplexity:")
+    print(result.complexity.round(4).to_string())
+    print("\nResidual summary:")
+    for key, value in result.residual_summary.items():
+        print(f"{key}: {value:.6f}")
+    print(f"Cross-loaded items: {result.cross_loaded_items}")
+    if result.warnings:
+        print("Warnings:")
+        for warning in result.warnings:
+            print(f"- {warning}")
     print("\nLoadings:")
     print(result.loadings.round(4).to_string())
 

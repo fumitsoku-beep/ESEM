@@ -46,8 +46,21 @@ def test_fit_efa_paf_varimax_shapes() -> None:
     assert result.uniquenesses.shape[0] == 6
     assert result.explained_variance.shape[0] == 2
     assert result.correlation_matrix.shape == (6, 6)
+    assert result.residual_matrix.shape == (6, 6)
+    assert result.factor_correlation.shape == (2, 2)
+    assert result.complexity.shape[0] == 6
+    assert set(result.residual_summary) == {
+        "rmsr",
+        "mean_abs_residual",
+        "max_abs_residual",
+        "n_abs_gt_0_05",
+        "n_abs_gt_0_10",
+    }
+    assert isinstance(result.cross_loaded_items, tuple)
+    assert isinstance(result.warnings, tuple)
     assert (result.communalities >= 0).all()
     assert (result.communalities <= 1).all()
+    assert (result.complexity >= 1.0).all()
     assert (result.uniquenesses >= config.min_uniqueness).all()
     assert result.n_iter >= 1
 
