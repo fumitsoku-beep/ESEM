@@ -311,6 +311,8 @@ sel = suggest_n_factors(data, FactorSelectionConfig(items=("i1", "i2", "i3", "i4
 | `enable_pa` | `True` | 是否运行 PA |
 | `enable_kaiser` | `True` | 是否运行 Kaiser |
 | `enable_scree` | `True` | 是否输出 scree 数据 |
+| `consensus_strategy` | `majority_min_tie` | 聚合策略：`majority_min_tie`、`weighted_vote`、`stability_first`、`median_floor` |
+| `consensus_weights` | `None` | `weighted_vote` 时的方法权重配置（未指定方法默认 `1.0`） |
 
 ---
 

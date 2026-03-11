@@ -105,6 +105,52 @@ def test_suggest_n_factors_only_kaiser() -> None:
     assert set(result.suggestions_by_method) == {"kaiser"}
 
 
+def test_suggest_n_factors_weighted_vote_respects_method_weights() -> None:
+    data = _synthetic_efa_data()
+    config = FactorSelectionConfig(
+        items=("i1", "i2", "i3", "i4", "i5", "i6"),
+        n_min=1,
+        n_max=4,
+        pa_iter=120,
+        random_state=42,
+        consensus_strategy="weighted_vote",
+        consensus_weights={"scree": 10.0, "parallel_analysis": 1.0, "map": 1.0, "kaiser": 1.0},
+    )
+    result = suggest_n_factors(data, config)
+    assert "scree" in result.suggestions_by_method
+    assert result.consensus_n_factors == result.suggestions_by_method["scree"]
+
+
+def test_suggest_n_factors_stability_first_is_conservative() -> None:
+    data = _synthetic_efa_data()
+    config = FactorSelectionConfig(
+        items=("i1", "i2", "i3", "i4", "i5", "i6"),
+        n_min=1,
+        n_max=4,
+        pa_iter=120,
+        random_state=42,
+        consensus_strategy="stability_first",
+    )
+    result = suggest_n_factors(data, config)
+    assert result.consensus_n_factors == min(result.suggestions_by_method.values())
+
+
+def test_suggest_n_factors_median_floor_strategy() -> None:
+    data = _synthetic_efa_data()
+    config = FactorSelectionConfig(
+        items=("i1", "i2", "i3", "i4", "i5", "i6"),
+        n_min=1,
+        n_max=4,
+        pa_iter=120,
+        random_state=42,
+        consensus_strategy="median_floor",
+    )
+    result = suggest_n_factors(data, config)
+    values = sorted(result.suggestions_by_method.values())
+    expected = int(np.floor(np.median(values)))
+    assert result.consensus_n_factors == expected
+
+
 def test_suggest_n_factors_map_matches_partial_formula() -> None:
     data = _synthetic_efa_data()
     config = FactorSelectionConfig(
@@ -148,4 +194,29 @@ def test_suggest_n_factors_requires_at_least_one_method() -> None:
         enable_scree=False,
     )
     with pytest.raises(ValueError, match="At least one factor-count method"):
+        suggest_n_factors(data, config)
+
+
+def test_suggest_n_factors_rejects_invalid_consensus_strategy() -> None:
+    data = _synthetic_efa_data()
+    config = FactorSelectionConfig(
+        items=("i1", "i2", "i3", "i4", "i5", "i6"),
+        n_min=1,
+        n_max=4,
+        consensus_strategy="unknown",
+    )
+    with pytest.raises(ValueError, match="Unsupported consensus strategy"):
+        suggest_n_factors(data, config)
+
+
+def test_suggest_n_factors_rejects_non_positive_consensus_weight() -> None:
+    data = _synthetic_efa_data()
+    config = FactorSelectionConfig(
+        items=("i1", "i2", "i3", "i4", "i5", "i6"),
+        n_min=1,
+        n_max=4,
+        consensus_strategy="weighted_vote",
+        consensus_weights={"parallel_analysis": 0.0},
+    )
+    with pytest.raises(ValueError, match="consensus_weights"):
         suggest_n_factors(data, config)

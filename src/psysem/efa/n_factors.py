@@ -9,6 +9,19 @@ import pandas as pd
 from .contracts import FactorSelectionConfig, FactorSelectionResult
 from .diagnostics import build_efa_correlation_matrix
 
+_SUPPORTED_CONSENSUS_STRATEGIES = {
+    "majority_min_tie",
+    "weighted_vote",
+    "stability_first",
+    "median_floor",
+}
+_STABILITY_METHOD_ORDER = (
+    "parallel_analysis",
+    "map",
+    "scree",
+    "kaiser",
+)
+
 
 def suggest_n_factors(data: pd.DataFrame, config: FactorSelectionConfig) -> FactorSelectionResult:
     """Suggest factor count using multiple EFA heuristics."""
@@ -70,6 +83,7 @@ def suggest_n_factors(data: pd.DataFrame, config: FactorSelectionConfig) -> Fact
         n_min=n_min,
         n_max=n_max,
         strategy=config.consensus_strategy,
+        weights=config.consensus_weights,
     )
     return FactorSelectionResult(
         items=items,
@@ -109,6 +123,19 @@ def _validate_selection_config(
     enabled = [config.enable_pa, config.enable_map, config.enable_kaiser, config.enable_scree]
     if not any(enabled):
         raise ValueError("At least one factor-count method must be enabled.")
+    if config.consensus_strategy not in _SUPPORTED_CONSENSUS_STRATEGIES:
+        supported = ", ".join(sorted(_SUPPORTED_CONSENSUS_STRATEGIES))
+        raise ValueError(
+            f"Unsupported consensus strategy `{config.consensus_strategy}`. "
+            f"Supported: {supported}."
+        )
+
+    if config.consensus_weights is not None:
+        for method, weight in config.consensus_weights.items():
+            if not isinstance(method, str) or not method.strip():
+                raise ValueError("`consensus_weights` keys must be non-empty strings.")
+            if weight <= 0:
+                raise ValueError("`consensus_weights` values must be > 0.")
 
 
 def _resolve_factor_range(config: FactorSelectionConfig, *, n_items: int) -> tuple[int, int]:
@@ -199,16 +226,39 @@ def _aggregate_consensus(
     n_min: int,
     n_max: int,
     strategy: str,
+    weights: dict[str, float] | None = None,
 ) -> int:
     if not suggestions:
         raise ValueError("No factor-count suggestion available.")
-    if strategy != "majority_min_tie":
-        raise ValueError(f"Unsupported consensus strategy `{strategy}`.")
+    if strategy == "majority_min_tie":
+        counts = Counter(suggestions.values())
+        top_votes = max(counts.values())
+        winners = [k for k, v in counts.items() if v == top_votes]
+        chosen = min(winners)
+        return _clip_n_factors(chosen, n_min=n_min, n_max=n_max)
 
-    counts = Counter(suggestions.values())
-    top_votes = max(counts.values())
-    winners = [k for k, v in counts.items() if v == top_votes]
-    return _clip_n_factors(min(winners), n_min=n_min, n_max=n_max)
+    if strategy == "weighted_vote":
+        score_by_factor: dict[int, float] = {}
+        for method, n_factors in suggestions.items():
+            weight = 1.0
+            if weights is not None:
+                weight = float(weights.get(method, 1.0))
+            score_by_factor[n_factors] = score_by_factor.get(n_factors, 0.0) + weight
+        top_score = max(score_by_factor.values())
+        winners = [k for k, v in score_by_factor.items() if v == top_score]
+        chosen = min(winners)
+        return _clip_n_factors(chosen, n_min=n_min, n_max=n_max)
+
+    if strategy == "stability_first":
+        ranked = [suggestions[name] for name in _STABILITY_METHOD_ORDER if name in suggestions]
+        chosen = min(ranked) if ranked else min(suggestions.values())
+        return _clip_n_factors(chosen, n_min=n_min, n_max=n_max)
+
+    if strategy == "median_floor":
+        chosen = int(np.floor(np.median(list(suggestions.values()))))
+        return _clip_n_factors(chosen, n_min=n_min, n_max=n_max)
+
+    raise ValueError(f"Unsupported consensus strategy `{strategy}`.")
 
 
 def _clip_n_factors(value: int, *, n_min: int, n_max: int) -> int:

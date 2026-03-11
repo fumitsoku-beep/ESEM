@@ -297,6 +297,8 @@ print(workflow.comparison_table[["n_factors", "score"]])
 | `enable_map` | `bool` | `True` | 启用 MAP |
 | `enable_kaiser` | `bool` | `True` | 启用 Kaiser |
 | `enable_scree` | `bool` | `True` | 启用 Scree 拐点建议 |
+| `consensus_strategy` | `str` | `majority_min_tie` | 聚合策略：`majority_min_tie`、`weighted_vote`、`stability_first`、`median_floor` |
+| `consensus_weights` | `dict[str, float] \| None` | `None` | `weighted_vote` 下的方法权重（未指定方法默认 1.0） |
 
 `EFAEvaluationConfig` 主要参数：
 

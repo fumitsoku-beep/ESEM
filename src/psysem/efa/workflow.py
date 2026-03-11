@@ -109,6 +109,7 @@ def _merge_selection_config(
         enable_scree=config.enable_scree,
         dropna=config.dropna,
         consensus_strategy=config.consensus_strategy,
+        consensus_weights=config.consensus_weights,
     )
 
 

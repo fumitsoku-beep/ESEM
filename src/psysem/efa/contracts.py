@@ -46,6 +46,7 @@ class FactorSelectionConfig:
     enable_scree: bool = True
     dropna: bool = True
     consensus_strategy: str = "majority_min_tie"
+    consensus_weights: dict[str, float] | None = None
 
 
 @dataclass
