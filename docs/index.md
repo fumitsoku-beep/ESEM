@@ -4,6 +4,14 @@ This is the initial documentation placeholder for `psysem`.
 
 ## Current Flow Diagrams
 
+### Standard ESEM step workflow
+
+![Standard ESEM step workflow](assets/images/flow-esem-standard.zh-CN.png)
+
+### `psysem` step workflow
+
+![psysem step workflow](assets/images/flow-psysem-step.zh-CN.png)
+
 ### Overall module flow
 
 ![Overall flow](assets/images/flow-overview-current.zh-CN.png)
@@ -25,6 +33,10 @@ This is the initial documentation placeholder for `psysem`.
 
 - [SEM Phase Implementation (ZH)](sem-phase-implementation.zh-CN.md)
 - [SEM Next Steps (ZH)](sem-next-steps.zh-CN.md)
+
+## ESEM Baseline Research
+
+- [ESEM Ecosystem and Practice Baseline (ZH)](esem-baseline-landscape.zh-CN.md)
 
 ## Current scope
 
