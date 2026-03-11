@@ -14,7 +14,7 @@
 | Phase | 目标 | 产出 | 状态 |
 | --- | --- | --- | --- |
 | Phase 1 | 入口与契约统一 | `ModelSpec` 扩展、`fit(data, spec=...)`、严格语法校验、标准结果字段 | 已完成（基础版） |
-| Phase 2 | 测量层矩阵构建 | measurement block 组装、识别性检查、参数索引 | 进行中（首批已完成） |
+| Phase 2 | 测量层矩阵构建 | measurement block 组装、识别性检查、参数索引 | 进行中（第二批已完成） |
 | Phase 3 | 结构层 + ML 估计闭环 | structural 路径映射、目标函数、优化、SE 与基础 fit 指标 | 规划中 |
 | Phase 4（可选） | 高级能力与性能优化 | MLR/WLSMV、多组与不变性、bootstrap、报告增强 | 可选 |
 
@@ -50,10 +50,12 @@ Phase 1 已落地（第二批）：
 6. `SEMResult` 扩展字段已接入 `summary` 与 `to_markdown`。  
 7. `SEMModel.fit` 已生成参数表草稿（free/fixed/label）并写入 `parameter_table`。  
 
-Phase 2 已落地（首批）：
+Phase 2 已落地（第二批）：
 
 1. 新增 `measurement` 模块，支持 `Lambda`/`Theta` 矩阵草图构建。  
 2. 增加基础识别性检查（最少指标数、marker 缺失告警）。  
+3. 支持多 block 组装映射（`block_latent_pairs`）。  
+4. measurement 层加载参数与全局 `parameter_table` 索引已对齐。  
 
 ---
 

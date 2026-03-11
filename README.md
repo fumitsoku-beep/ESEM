@@ -17,7 +17,7 @@
 | --- | --- | --- |
 | `psysem.data` | 可用 | `spec` 解析 + 规则校验 + 与 `DataFrame` 对齐校验 |
 | `psysem.efa` | 可用（Phase 3 进行中） | `PAF/PCA`、KMO/Bartlett、PA/MAP/Scree/Kaiser、候选拟合评分与最优因子数选择 + 模块化解释输出 |
-| `SEMModel` | Phase 1 + Phase 2（起步） | 结构化解析 + `fit(data, spec=...)` 统一入口 + measurement 矩阵草图；估计器仍为占位 |
+| `SEMModel` | Phase 1 完成基础版 + Phase 2 进行中 | 结构化解析 + `fit(data, spec=...)` + 参数表草稿 + measurement 矩阵草图；估计器仍为占位 |
 | `psysem.esem_spec` | 兼容层 | 旧导入路径，内部已转发到 `psysem.data` |
 
 ---
@@ -56,7 +56,7 @@ python -m pytest -q
 
 ## EFA 测试与质量门禁（2026-03-11）
 
-当前仓库测试数量：`103`（其中 EFA 相关测试 `67`）。
+当前仓库测试数量：`107`（其中 EFA 相关测试 `67`）。
 
 EFA 已覆盖以下测试层级：
 
@@ -594,7 +594,8 @@ src/psysem/
 #### Phase 2: 测量层（Measurement）
 
 - [x] 新建 `psysem.measurement`，支持单 block CFA/ESEM 的矩阵草图构造（`Lambda`/`Theta`）
-- [ ] 支持多 block 组装与 block 级旋转覆盖
+- [x] 支持多 block 组装（`block_latent_pairs` 与统一 `Lambda/Theta`）
+- [ ] 支持 block 级旋转覆盖（当前仅保留契约入口）
 - [x] 增加基础识别性检查（最少指标数、marker 缺失告警）
 
 #### Phase 3: 结构层（Structural）

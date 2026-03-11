@@ -157,6 +157,16 @@ def test_fit_builds_parameter_table_and_parameter_placeholders() -> None:
     assert len(result.parameter_table) == 6
     assert len(result.parameters) == 4
     assert set(result.parameters) == {"l1", "b1", "p1", "p2"}
+    free_rows = [row for row in result.parameter_table if row["is_free"]]
+    free_indices = {int(row["parameter_index"]) for row in free_rows}
+    assert free_indices == {1, 2, 3, 4}
+    assert result.measurement_design is not None
+    measurement_indices = {
+        int(item.parameter_index)
+        for item in result.measurement_design.loading_parameters
+        if item.parameter_index is not None
+    }
+    assert measurement_indices == {1, 2}
     fixed_rows = [row for row in result.parameter_table if row["fixed_value"] is not None]
     assert len(fixed_rows) == 2
     assert any(row["fixed_value"] == pytest.approx(1.0) for row in fixed_rows)
@@ -175,6 +185,36 @@ def test_fit_attaches_measurement_design() -> None:
     assert result.measurement_design is not None
     assert result.measurement_design.lambda_matrix.shape == (3, 1)
     assert any("n_measurement_latent" == key for key in result.optimization_info)
+
+
+def test_fit_uses_shared_parameter_index_for_repeated_label() -> None:
+    data = pd.DataFrame(
+        {
+            "x1": [1.0, 2.0, 3.0],
+            "x2": [1.5, 2.5, 3.5],
+            "x3": [0.8, 1.8, 2.8],
+        }
+    )
+    result = SEMModel("eta =~ a*x1 + a*x2 + x3").fit(data)
+    free_rows = [row for row in result.parameter_table if row["is_free"]]
+    a_rows = [row for row in free_rows if row["parameter"] == "a"]
+    assert len(a_rows) == 2
+    assert int(a_rows[0]["parameter_index"]) == int(a_rows[1]["parameter_index"])
+    assert set(result.parameters) == {"a", "p1"}
+
+
+def test_fit_with_spec_multiblock_builds_ordered_block_latent_pairs() -> None:
+    payload = _esem_payload_multiblock()
+    spec = esem_spec_from_dict(payload)
+    model = SEMModel()
+    result = model.fit(_spec_data_multiblock(), spec=spec)
+    assert result.measurement_design is not None
+    assert result.measurement_design.block_latent_pairs == (
+        ("internalizing", "internalizing_f1"),
+        ("externalizing", "externalizing_f1"),
+    )
+    assert result.optimization_info["n_measurement_latent"] == 2
+    assert result.optimization_info["n_measurement_observed"] == 6
 
 
 def _esem_payload() -> dict[str, object]:
@@ -203,6 +243,48 @@ def _spec_data() -> pd.DataFrame:
             "i1": [1.0, 2.0, 3.0],
             "i2": [1.1, 2.1, 3.1],
             "i3": [0.9, 1.8, 2.7],
+            "y": [2.0, 2.8, 3.7],
+        }
+    )
+
+
+def _esem_payload_multiblock() -> dict[str, object]:
+    return {
+        "blocks": [
+            {
+                "name": "internalizing",
+                "items": ["i1", "i2", "i3"],
+                "n_factors": 1,
+            },
+            {
+                "name": "externalizing",
+                "items": ["e1", "e2", "e3"],
+                "n_factors": 1,
+            },
+        ],
+        "estimator": "ML",
+        "variable_types": {
+            "i1": "continuous",
+            "i2": "continuous",
+            "i3": "continuous",
+            "e1": "continuous",
+            "e2": "continuous",
+            "e3": "continuous",
+            "y": "continuous",
+        },
+        "structural": ["y ~ internalizing_f1 + externalizing_f1"],
+    }
+
+
+def _spec_data_multiblock() -> pd.DataFrame:
+    return pd.DataFrame(
+        {
+            "i1": [1.0, 2.0, 3.0],
+            "i2": [1.1, 2.1, 3.1],
+            "i3": [0.9, 1.8, 2.7],
+            "e1": [0.8, 1.8, 2.8],
+            "e2": [0.7, 1.7, 2.7],
+            "e3": [1.2, 2.2, 3.2],
             "y": [2.0, 2.8, 3.7],
         }
     )

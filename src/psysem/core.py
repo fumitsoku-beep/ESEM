@@ -35,7 +35,7 @@ class SEMModel:
         estimator = (model_spec.estimator or "ml").lower()
         parameter_table = _build_parameter_table(model_spec)
         parameters = _build_parameters(parameter_table)
-        measurement_design = _try_build_measurement_design(model_spec)
+        measurement_design = _try_build_measurement_design(model_spec, parameter_table)
         warnings: list[str] = []
         if measurement_design is not None:
             warnings.extend(check_measurement_identification(measurement_design))
@@ -94,20 +94,30 @@ def _resolve_n_obs(data: Any) -> int:
 
 def _build_parameter_table(model_spec: ModelSpec) -> tuple[dict[str, Any], ...]:
     rows: list[dict[str, Any]] = []
-    free_counter = 1
-    label_registry: dict[str, str] = {}
+    next_parameter_index = 1
+    unnamed_counter = 1
+    label_registry: dict[str, int] = {}
     for relation_index, relation in enumerate(model_spec.relations, start=1):
         for term_index, term in enumerate(relation.terms, start=1):
             fixed_value = term.coefficient
             is_free = fixed_value is None
             parameter_name: str | None
+            parameter_index: int | None
             if not is_free:
                 parameter_name = None
+                parameter_index = None
             elif term.label is not None:
-                parameter_name = label_registry.setdefault(term.label, term.label)
+                parameter_index = label_registry.get(term.label)
+                if parameter_index is None:
+                    parameter_index = next_parameter_index
+                    label_registry[term.label] = parameter_index
+                    next_parameter_index += 1
+                parameter_name = term.label
             else:
-                parameter_name = f"p{free_counter}"
-                free_counter += 1
+                parameter_index = next_parameter_index
+                parameter_name = f"p{unnamed_counter}"
+                next_parameter_index += 1
+                unnamed_counter += 1
 
             rows.append(
                 {
@@ -120,6 +130,7 @@ def _build_parameter_table(model_spec: ModelSpec) -> tuple[dict[str, Any], ...]:
                     "fixed_value": fixed_value,
                     "is_free": is_free,
                     "parameter": parameter_name,
+                    "parameter_index": parameter_index,
                 }
             )
     return tuple(rows)
@@ -136,8 +147,11 @@ def _build_parameters(parameter_table: tuple[dict[str, Any], ...]) -> dict[str, 
     return parameters
 
 
-def _try_build_measurement_design(model_spec: ModelSpec) -> MeasurementDesign | None:
+def _try_build_measurement_design(
+    model_spec: ModelSpec,
+    parameter_table: tuple[dict[str, Any], ...],
+) -> MeasurementDesign | None:
     has_measurement = any(relation.operator == "=~" for relation in model_spec.relations)
     if not has_measurement:
         return None
-    return build_measurement_design(model_spec)
+    return build_measurement_design(model_spec, parameter_table=parameter_table)

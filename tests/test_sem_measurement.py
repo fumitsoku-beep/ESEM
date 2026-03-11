@@ -14,6 +14,9 @@ def test_build_measurement_design_smoke() -> None:
     assert pd.isna(design.lambda_matrix.loc["x2", "eta"])
     assert pd.isna(design.lambda_matrix.loc["x3", "eta"])
     assert design.theta_matrix.shape == (3, 3)
+    assert len(design.loading_parameters) == 3
+    assert design.loading_parameters[0].is_free is False
+    assert design.loading_parameters[1].is_free is True
 
 
 def test_build_measurement_design_rejects_no_measurement_relations() -> None:
@@ -33,3 +36,63 @@ def test_check_measurement_identification_warns_without_fixed_marker() -> None:
     design = build_measurement_design(spec)
     warnings = check_measurement_identification(design)
     assert any("no fixed loading marker" in warning.lower() for warning in warnings)
+
+
+def test_build_measurement_design_with_parameter_table_uses_given_indices() -> None:
+    spec = parse_model("eta =~ a*x1 + x2 + x3")
+    parameter_table = (
+        {
+            "relation_index": 1,
+            "term_index": 1,
+            "is_free": True,
+            "parameter": "a",
+            "parameter_index": 5,
+            "fixed_value": None,
+        },
+        {
+            "relation_index": 1,
+            "term_index": 2,
+            "is_free": True,
+            "parameter": "p1",
+            "parameter_index": 6,
+            "fixed_value": None,
+        },
+        {
+            "relation_index": 1,
+            "term_index": 3,
+            "is_free": True,
+            "parameter": "p2",
+            "parameter_index": 7,
+            "fixed_value": None,
+        },
+    )
+    design = build_measurement_design(spec, parameter_table=parameter_table)
+    indices = [item.parameter_index for item in design.loading_parameters]
+    assert indices == [5, 6, 7]
+    assert all(item.is_free for item in design.loading_parameters)
+
+
+def test_build_measurement_design_tracks_block_latent_pairs() -> None:
+    spec = parse_model(
+        "internalizing_f1 =~ i1 + i2 + i3\n"
+        "externalizing_f1 =~ e1 + e2 + e3"
+    )
+    from psysem.model import ModelSpec
+
+    spec_with_blocks = ModelSpec(
+        source=spec.source,
+        syntax=spec.syntax,
+        relations=spec.relations,
+        observed_variables=spec.observed_variables,
+        latent_variables=spec.latent_variables,
+        estimator=spec.estimator,
+        block_names=("internalizing", "externalizing"),
+        warnings=spec.warnings,
+        constraints=spec.constraints,
+        parsed_constraints=spec.parsed_constraints,
+    )
+    design = build_measurement_design(spec_with_blocks)
+    assert design.block_latent_pairs == (
+        ("internalizing", "internalizing_f1"),
+        ("externalizing", "externalizing_f1"),
+    )

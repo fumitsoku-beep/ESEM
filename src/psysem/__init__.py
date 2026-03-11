@@ -34,7 +34,12 @@ from .efa import (
 )
 from .fit_indices import compute_basic_fit_indices
 from .invariance import InvarianceResult, test_measurement_invariance
-from .measurement import MeasurementDesign, build_measurement_design, check_measurement_identification
+from .measurement import (
+    LoadingParameter,
+    MeasurementDesign,
+    build_measurement_design,
+    check_measurement_identification,
+)
 from .model import (
     ModelConstraint,
     ModelRelation,
@@ -73,6 +78,7 @@ __all__ = [
     "interpret_efa",
     "list_extraction_methods",
     "list_rotation_methods",
+    "LoadingParameter",
     "MeasurementDesign",
     "ModelConstraint",
     "ModelRelation",

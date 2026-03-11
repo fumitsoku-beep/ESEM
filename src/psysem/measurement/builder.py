@@ -1,18 +1,29 @@
 from __future__ import annotations
 
+from typing import Any
+
 import numpy as np
 import pandas as pd
 
 from ..model import ModelSpec
-from .contracts import MeasurementDesign
+from .contracts import LoadingParameter, MeasurementDesign
 
 
-def build_measurement_design(model_spec: ModelSpec) -> MeasurementDesign:
+def build_measurement_design(
+    model_spec: ModelSpec,
+    *,
+    parameter_table: tuple[dict[str, Any], ...] | None = None,
+) -> MeasurementDesign:
     """Build Lambda/Theta placeholders from measurement relations."""
-    measurement_relations = tuple(rel for rel in model_spec.relations if rel.operator == "=~")
+    measurement_relations = tuple(
+        (relation_index, relation)
+        for relation_index, relation in enumerate(model_spec.relations, start=1)
+        if relation.operator == "=~"
+    )
     if not measurement_relations:
         raise ValueError("No measurement relations (`=~`) found in model.")
 
+    parameter_lookup = _parameter_lookup(parameter_table)
     latent_order: list[str] = []
     latent_seen: set[str] = set()
     observed_order: list[str] = []
@@ -21,28 +32,78 @@ def build_measurement_design(model_spec: ModelSpec) -> MeasurementDesign:
     has_fixed_marker: dict[str, bool] = {}
     free_loadings: list[tuple[str, str]] = []
     fixed_loadings: list[tuple[str, str, float]] = []
+    loading_parameters: list[LoadingParameter] = []
+    block_latent_pairs: list[tuple[str, str]] = []
+    block_latent_seen: set[tuple[str, str]] = set()
+    fallback_label_index: dict[str, int] = {}
+    fallback_next_index = 1
+    indicator_fixed_count: dict[str, int] = {}
+    latent_fixed_count: dict[str, int] = {}
+    latent_free_count: dict[str, int] = {}
 
-    for relation in measurement_relations:
+    for relation_index, relation in measurement_relations:
         latent = relation.lhs
         if latent not in latent_seen:
             latent_seen.add(latent)
             latent_order.append(latent)
         indicator_counts.setdefault(latent, 0)
         has_fixed_marker.setdefault(latent, False)
+        latent_fixed_count.setdefault(latent, 0)
+        latent_free_count.setdefault(latent, 0)
 
-        for term in relation.terms:
+        block_name = _resolve_block_name(latent, model_spec.block_names)
+        if block_name is not None:
+            pair = (block_name, latent)
+            if pair not in block_latent_seen:
+                block_latent_seen.add(pair)
+                block_latent_pairs.append(pair)
+
+        for term_index, term in enumerate(relation.terms, start=1):
             observed = term.variable
             if observed not in observed_seen:
                 observed_seen.add(observed)
                 observed_order.append(observed)
 
             indicator_counts[latent] += 1
-            if term.coefficient is None:
-                free_loadings.append((observed, latent))
+            param_meta = parameter_lookup.get((relation_index, term_index))
+            if param_meta is None:
+                is_free, parameter_name, parameter_index, fixed_value, fallback_next_index = (
+                    _fallback_parameter_meta(
+                        term=term,
+                        fallback_label_index=fallback_label_index,
+                        next_parameter_index=fallback_next_index,
+                    )
+                )
             else:
-                fixed_value = float(term.coefficient)
+                is_free, parameter_name, parameter_index, fixed_value = param_meta
+                if term.coefficient is not None and fixed_value is None:
+                    raise ValueError(
+                        "Parameter table/meta mismatch: fixed loading term has no fixed value."
+                    )
+
+            if is_free:
+                free_loadings.append((observed, latent))
+                latent_free_count[latent] += 1
+            else:
+                assert fixed_value is not None
                 fixed_loadings.append((observed, latent, fixed_value))
                 has_fixed_marker[latent] = True
+                latent_fixed_count[latent] += 1
+                indicator_fixed_count[observed] = indicator_fixed_count.get(observed, 0) + 1
+
+            loading_parameters.append(
+                LoadingParameter(
+                    observed=observed,
+                    latent=latent,
+                    is_free=is_free,
+                    parameter=parameter_name,
+                    parameter_index=parameter_index,
+                    fixed_value=fixed_value,
+                    relation_index=relation_index,
+                    term_index=term_index,
+                    block_name=block_name,
+                )
+            )
 
     for latent, count in indicator_counts.items():
         if count < 2:
@@ -72,13 +133,85 @@ def build_measurement_design(model_spec: ModelSpec) -> MeasurementDesign:
             warnings.append(
                 f"Latent `{latent}` has no fixed loading marker; scale may be under-identified."
             )
+        if latent_fixed_count.get(latent, 0) > 1:
+            warnings.append(
+                f"Latent `{latent}` has multiple fixed loadings; check marker strategy."
+            )
+        if latent_free_count.get(latent, 0) == 0:
+            warnings.append(f"Latent `{latent}` has no free loadings; model may be over-constrained.")
+
+    for observed, count in indicator_fixed_count.items():
+        if count > 1:
+            warnings.append(
+                f"Observed `{observed}` has fixed loadings on multiple latents; check identification."
+            )
+    if not free_loadings:
+        warnings.append("No free loadings found in measurement design.")
 
     return MeasurementDesign(
         observed_variables=tuple(observed_order),
         latent_variables=tuple(latent_order),
         lambda_matrix=lambda_matrix,
         theta_matrix=theta_matrix,
+        loading_parameters=tuple(loading_parameters),
+        block_latent_pairs=tuple(block_latent_pairs),
         free_loadings=tuple(free_loadings),
         fixed_loadings=tuple(fixed_loadings),
-        warnings=tuple(warnings),
+        warnings=tuple(dict.fromkeys(warnings)),
     )
+
+
+def _parameter_lookup(
+    parameter_table: tuple[dict[str, Any], ...] | None,
+) -> dict[tuple[int, int], tuple[bool, str | None, int | None, float | None]]:
+    if parameter_table is None:
+        return {}
+    lookup: dict[tuple[int, int], tuple[bool, str | None, int | None, float | None]] = {}
+    for row in parameter_table:
+        relation_index = int(row["relation_index"])
+        term_index = int(row["term_index"])
+        key = (relation_index, term_index)
+        fixed_raw = row["fixed_value"]
+        lookup[key] = (
+            bool(row["is_free"]),
+            row["parameter"] if isinstance(row["parameter"], str) else None,
+            int(row["parameter_index"]) if isinstance(row["parameter_index"], int) else None,
+            float(fixed_raw) if isinstance(fixed_raw, (int, float)) else None,
+        )
+    return lookup
+
+
+def _fallback_parameter_meta(
+    *,
+    term,
+    fallback_label_index: dict[str, int],
+    next_parameter_index: int,
+) -> tuple[bool, str | None, int | None, float | None, int]:
+    fixed_value = term.coefficient
+    if fixed_value is not None:
+        return False, None, None, float(fixed_value), next_parameter_index
+
+    if term.label is not None:
+        index = fallback_label_index.get(term.label)
+        if index is None:
+            index = next_parameter_index
+            fallback_label_index[term.label] = index
+            next_parameter_index += 1
+        return True, term.label, index, None, next_parameter_index
+
+    index = next_parameter_index
+    parameter_name = f"p{index}"
+    return True, parameter_name, index, None, next_parameter_index + 1
+
+
+def _resolve_block_name(latent: str, block_names: tuple[str, ...]) -> str | None:
+    if not block_names:
+        return None
+    if "_f" not in latent:
+        return None
+    candidate, _, suffix = latent.rpartition("_f")
+    if not suffix.isdigit():
+        return None
+    if candidate in set(block_names):
+        return candidate
+    return None
