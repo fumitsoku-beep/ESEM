@@ -7,24 +7,22 @@ import pandas as pd
 
 try:
     from psysem import (
-        EFAConfig,
         EFADiagnosticsConfig,
+        EFAEvaluationConfig,
+        EFAWorkflowConfig,
         FactorSelectionConfig,
-        fit_efa,
-        run_efa_diagnostics,
-        suggest_n_factors,
+        run_efa_workflow,
     )
 except ModuleNotFoundError:
     import sys
 
     sys.path.append(str(Path(__file__).resolve().parents[1] / "src"))
     from psysem import (
-        EFAConfig,
         EFADiagnosticsConfig,
+        EFAEvaluationConfig,
+        EFAWorkflowConfig,
         FactorSelectionConfig,
-        fit_efa,
-        run_efa_diagnostics,
-        suggest_n_factors,
+        run_efa_workflow,
     )
 
 
@@ -65,28 +63,28 @@ def load_or_create_data(path: Path = DATA_PATH) -> pd.DataFrame:
 def main() -> None:
     data = load_or_create_data()
     items = tuple(data.columns)
-
-    diag = run_efa_diagnostics(
+    workflow = run_efa_workflow(
         data,
-        EFADiagnosticsConfig(items=items),
-    )
-    selection = suggest_n_factors(
-        data,
-        FactorSelectionConfig(
+        EFAWorkflowConfig(
             items=items,
-            n_min=1,
-            n_max=4,
-            pa_iter=200,
-            random_state=42,
+            diagnostics=EFADiagnosticsConfig(items=()),
+            selection=FactorSelectionConfig(
+                items=(),
+                n_min=1,
+                n_max=4,
+                pa_iter=200,
+                random_state=42,
+            ),
+            evaluation=EFAEvaluationConfig(),
+            candidate_strategy="selection_union",
+            include_consensus=True,
+            extraction="paf",
+            rotation="varimax",
         ),
     )
-    config = EFAConfig(
-        items=items,
-        n_factors=selection.consensus_n_factors,
-        extraction="paf",
-        rotation="varimax",
-    )
-    result = fit_efa(data, config)
+    diag = workflow.diagnostics
+    selection = workflow.selection
+    result = workflow.best_model
 
     print(f"Input data: {DATA_PATH}")
     print(f"Shape: {data.shape}")
@@ -97,8 +95,12 @@ def main() -> None:
     )
     print(f"Factor suggestions: {selection.suggestions_by_method}")
     print(f"Consensus n_factors: {selection.consensus_n_factors}")
+    print(f"Best n_factors from workflow: {workflow.best_n_factors}")
+    print(f"Best score: {workflow.best_evaluation.score:.4f}")
     print(f"Converged: {result.converged}")
     print(f"Iterations: {result.n_iter}")
+    print("\nCandidate comparison:")
+    print(workflow.comparison_table.to_string(index=False))
     print("\nExplained variance:")
     print(result.explained_variance.round(4).to_string())
     print("\nLoadings:")

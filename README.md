@@ -16,7 +16,7 @@
 | 模块 | 状态 | 说明 |
 | --- | --- | --- |
 | `psysem.data` | 可用 | `spec` 解析 + 规则校验 + 与 `DataFrame` 对齐校验 |
-| `psysem.efa` | 可用（Phase 1） | `PAF/PCA` 提取、`varimax/none`、KMO/Bartlett、自动因子数建议（PA/MAP/Scree/Kaiser） |
+| `psysem.efa` | 可用（Phase 2 基础版） | `PAF/PCA`、KMO/Bartlett、PA/MAP/Scree/Kaiser、候选拟合评分与最优因子数选择 |
 | `SEMModel` | 占位接口 | 已有 `fit` 入口，完整 SEM/ESEM 估计器尚未接入 |
 | `psysem.esem_spec` | 兼容层 | 旧导入路径，内部已转发到 `psysem.data` |
 
@@ -176,6 +176,39 @@ print(selection.suggestions_by_method)
 print(selection.consensus_n_factors)
 ```
 
+### 5) EFA 自动化工作流（Phase 2 基础版）
+
+```python
+import pandas as pd
+from psysem import (
+    EFADiagnosticsConfig,
+    EFAEvaluationConfig,
+    EFAWorkflowConfig,
+    FactorSelectionConfig,
+    run_efa_workflow,
+)
+
+data = pd.read_csv("examples/data/efa_demo_input.csv")
+items = tuple(data.columns)
+
+workflow = run_efa_workflow(
+    data,
+    EFAWorkflowConfig(
+        items=items,
+        diagnostics=EFADiagnosticsConfig(items=()),
+        selection=FactorSelectionConfig(items=(), n_min=1, n_max=4, pa_iter=200, random_state=42),
+        evaluation=EFAEvaluationConfig(),
+        candidate_strategy="selection_union",
+        include_consensus=True,
+        extraction="paf",
+        rotation="varimax",
+    ),
+)
+
+print(workflow.best_n_factors)
+print(workflow.comparison_table[["n_factors", "score"]])
+```
+
 ---
 
 ## ESEM 输入契约（当前实现）
@@ -264,6 +297,33 @@ print(selection.consensus_n_factors)
 | `enable_map` | `bool` | `True` | 启用 MAP |
 | `enable_kaiser` | `bool` | `True` | 启用 Kaiser |
 | `enable_scree` | `bool` | `True` | 启用 Scree 拐点建议 |
+
+`EFAEvaluationConfig` 主要参数：
+
+| 参数 | 类型 | 默认值 | 说明 |
+| --- | --- | --- | --- |
+| `salient_loading` | `float` | `0.30` | 显著载荷阈值 |
+| `cross_loading` | `float` | `0.30` | 交叉载荷判定阈值 |
+| `min_h2` | `float` | `0.20` | 低共同度判定阈值 |
+| `variance_weight` | `float` | `1.00` | 解释方差权重 |
+| `simplicity_weight` | `float` | `0.75` | 简单结构权重 |
+| `communality_weight` | `float` | `0.50` | 共同度权重 |
+| `cross_loading_penalty` | `float` | `1.00` | 交叉载荷惩罚权重 |
+| `factor_balance_penalty` | `float` | `0.25` | 因子不平衡惩罚权重 |
+
+`EFAWorkflowConfig` 主要参数：
+
+| 参数 | 类型 | 默认值 | 说明 |
+| --- | --- | --- | --- |
+| `items` | `tuple[str, ...]` | - | 分析题项列 |
+| `selection` | `FactorSelectionConfig` | - | 因子数建议配置 |
+| `diagnostics` | `EFADiagnosticsConfig` | - | 诊断配置 |
+| `evaluation` | `EFAEvaluationConfig` | - | 评分配置 |
+| `extraction` | `str` | `paf` | 候选模型提取方法 |
+| `rotation` | `str` | `varimax` | 候选模型旋转方法 |
+| `candidate_strategy` | `str` | `selection_union` | 候选策略：`selection_union` 或 `range` |
+| `include_consensus` | `bool` | `True` | 候选中是否包含共识因子数 |
+| `manual_candidates` | `tuple[int, ...]` | `()` | 手动补充候选因子数 |
 
 可注册自定义方法：
 

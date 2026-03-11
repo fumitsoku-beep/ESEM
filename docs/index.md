@@ -27,6 +27,7 @@ This is the initial documentation placeholder for `psysem`.
 - Smoke tests and CI setup
 - `psysem.data` module for ESEM spec/data validation
 - `psysem.efa` Phase 1: diagnostics (KMO/Bartlett) and factor-count suggestion (PA/MAP/Scree/Kaiser)
+- `psysem.efa` Phase 2 (basic): candidate fitting, model scoring, and best factor-count selection
 
 ## Next milestones
 

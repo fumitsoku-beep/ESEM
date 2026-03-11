@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 import pandas as pd
+
+if TYPE_CHECKING:
+    from .fit import EFAResult
 
 
 @dataclass(frozen=True)
@@ -59,3 +63,58 @@ class FactorSelectionResult:
     consensus_n_factors: int
     warnings: tuple[str, ...] = field(default_factory=tuple)
     correlation_matrix: pd.DataFrame = field(default_factory=pd.DataFrame)
+
+
+@dataclass(frozen=True)
+class EFAEvaluationConfig:
+    salient_loading: float = 0.30
+    cross_loading: float = 0.30
+    min_h2: float = 0.20
+    variance_weight: float = 1.00
+    simplicity_weight: float = 0.75
+    communality_weight: float = 0.50
+    cross_loading_penalty: float = 1.00
+    factor_balance_penalty: float = 0.25
+
+
+@dataclass
+class EFAEvaluationResult:
+    n_factors: int
+    score: float
+    explained_total: float
+    simple_structure_ratio: float
+    mean_h2: float
+    mean_max_loading: float
+    cross_loaded_items: int
+    low_h2_items: int
+    salient_items: int
+    warnings: tuple[str, ...] = field(default_factory=tuple)
+
+
+@dataclass(frozen=True)
+class EFAWorkflowConfig:
+    items: tuple[str, ...]
+    selection: FactorSelectionConfig = field(default_factory=lambda: FactorSelectionConfig(items=()))
+    diagnostics: EFADiagnosticsConfig = field(default_factory=lambda: EFADiagnosticsConfig(items=()))
+    evaluation: EFAEvaluationConfig = field(default_factory=EFAEvaluationConfig)
+    extraction: str = "paf"
+    rotation: str = "varimax"
+    max_iter: int = 200
+    tol: float = 1e-6
+    min_uniqueness: float = 0.005
+    candidate_strategy: str = "selection_union"
+    include_consensus: bool = True
+    manual_candidates: tuple[int, ...] = ()
+
+
+@dataclass
+class EFAWorkflowResult:
+    diagnostics: EFADiagnosticsResult
+    selection: FactorSelectionResult
+    candidate_results: dict[int, "EFAResult"]
+    candidate_evaluations: dict[int, EFAEvaluationResult]
+    comparison_table: pd.DataFrame
+    best_n_factors: int
+    best_model: "EFAResult"
+    best_evaluation: EFAEvaluationResult
+    warnings: tuple[str, ...] = field(default_factory=tuple)
