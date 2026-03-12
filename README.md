@@ -116,7 +116,36 @@ validate_esem_spec(spec, data)
 print("spec validation passed")
 ```
 
-### 3) 跑一个 SEM 原型模型
+### 3) 跑通一次 ESEM 最小工作流（新增）
+
+```python
+import pandas as pd
+
+from psysem import ESEMWorkflowConfig, SEMFitConfig, run_esem_workflow
+
+data = pd.read_csv("examples/data/efa_demo_input.csv")
+items = list(data.columns)
+
+spec_payload = {
+    "blocks": [{"name": "demo", "items": items, "n_factors": 2}],
+    "estimator": "ML",
+    "variable_types": {item: "continuous" for item in items},
+}
+
+workflow = run_esem_workflow(
+    data,
+    spec_payload,
+    ESEMWorkflowConfig(
+        fit_config=SEMFitConfig(max_iter=200, restarts=1, random_seed=42),
+    ),
+)
+
+print(workflow.best_candidate_id)
+print(workflow.comparison_table)
+print(workflow.best_candidate.sem_result.summary())
+```
+
+### 4) 跑一个 SEM 原型模型
 
 ```python
 import pandas as pd
@@ -145,7 +174,29 @@ print(result.optimization_info)
 更多示例：
 
 - `python examples/basic_efa.py`
+- `python examples/basic_esem.py`
 - `python examples/basic_sem.py`
+
+### 5) `basic_esem.py` 预期输出（示例）
+
+实际数值会随数据和随机种子有轻微变化，但结构应类似：
+
+```text
+Best candidate: block_full
+Comparison table:
+candidate_id   strategy  converged  total_score  cfi  tli  rmsea  srmr  aic  bic  n_warnings
+  block_full block_full       True       ...      ...  ...  ...    ...   ...  ...      ...
+
+SEM summary:
+SEM Fit Summary
+Converged: True
+Estimator: ml
+Fit indices:
+  cfi: ...
+  tli: ...
+  rmsea: ...
+  srmr: ...
+```
 
 ---
 
@@ -203,6 +254,7 @@ print(result.optimization_info)
 ## 文档索引
 
 - [ESEM baseline 对比文档（ZH）](docs/esem-baseline-landscape.zh-CN.md)
+- [ESEM 最小可跑路径（ZH）](docs/esem-mvp-run.zh-CN.md)
 - [参数总览（ZH）](docs/parameters.zh-CN.md)
 - [EFA Phase 1 实施文档（ZH）](docs/efa-phase1-implementation.zh-CN.md)
 - [EFA 测试与质量门禁（ZH）](docs/efa-testing.zh-CN.md)
