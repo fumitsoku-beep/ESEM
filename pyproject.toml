@@ -18,6 +18,12 @@ dependencies = [
   "scipy>=1.12"
 ]
 
+[project.urls]
+Homepage = "https://github.com/fumitsoku-beep/ESEM"
+Repository = "https://github.com/fumitsoku-beep/ESEM"
+Issues = "https://github.com/fumitsoku-beep/ESEM/issues"
+Changelog = "https://github.com/fumitsoku-beep/ESEM/blob/main/CHANGELOG.md"
+
 [project.optional-dependencies]
 dev = [
   "mypy>=1.15",

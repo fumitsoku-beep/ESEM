@@ -2,6 +2,9 @@
 
 面向心理测量场景的 Python EFA/ESEM/SEM 包（当前为 `alpha` 阶段）。
 
+> `psysem` is now publicly available as an alpha-stage project.
+> EFA is currently the most usable workflow, while SEM remains prototype-level and full ESEM workflow is still under development.
+
 `psysem` 的目标是把心理学里常见的分析链路拆成可复现、可测试、可扩展的模块：
 
 `data -> efa -> (esem measurement) -> sem structural`

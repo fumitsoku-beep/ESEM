@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Project discussions and planning
+    url: https://github.com/fumitsoku-beep/ESEM/discussions
+    about: Use Discussions for broader ideas, questions, and roadmap conversations when available.

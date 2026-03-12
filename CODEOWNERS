@@ -1,0 +1,10 @@
+# Default code owners
+* @fumitsoku-beep
+
+# Documentation
+/docs/ @fumitsoku-beep
+
+# Python source
+/src/ @fumitsoku-beep
+/tests/ @fumitsoku-beep
+/.github/ @fumitsoku-beep

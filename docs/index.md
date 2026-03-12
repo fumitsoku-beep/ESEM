@@ -37,6 +37,7 @@ This is the initial documentation placeholder for `psysem`.
 ## ESEM Baseline Research
 
 - [ESEM Ecosystem and Practice Baseline (ZH)](esem-baseline-landscape.zh-CN.md)
+- [ESEM Modular Workflow Plan (ZH)](esem-modular-workflow.zh-CN.md)
 
 ## Current scope
 
