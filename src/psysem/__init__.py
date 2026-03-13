@@ -44,6 +44,13 @@ from .estimation import (
     optimize_ml_parameters,
     parameter_vector_to_named_values,
 )
+from .esem import (
+    ESEMCandidateResult,
+    ESEMJudgeResult,
+    ESEMWorkflowConfig,
+    ESEMWorkflowResult,
+    run_esem_workflow,
+)
 from .fit_indices import compute_basic_fit_indices
 from .inference import InferenceResult, ParameterInferenceEntry, estimate_parameter_inference
 from .invariance import InvarianceResult, test_measurement_invariance
@@ -83,6 +90,10 @@ __all__ = [
     "build_implied_covariance",
     "build_ml_context",
     "build_start_vector",
+    "ESEMCandidateResult",
+    "ESEMJudgeResult",
+    "ESEMWorkflowConfig",
+    "ESEMWorkflowResult",
     "EFAConfig",
     "EFADiagnosticsConfig",
     "EFADiagnosticsResult",
@@ -124,6 +135,7 @@ __all__ = [
     "register_rotation_method",
     "run_efa_diagnostics",
     "run_efa_workflow",
+    "run_esem_workflow",
     "optimize_ml_parameters",
     "parameter_vector_to_named_values",
     "SEMModel",

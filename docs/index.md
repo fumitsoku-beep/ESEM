@@ -40,6 +40,7 @@ This is the initial documentation placeholder for `psysem`.
 
 - [ESEM Ecosystem and Practice Baseline (ZH)](esem-baseline-landscape.zh-CN.md)
 - [ESEM Modular Workflow Plan (ZH)](esem-modular-workflow.zh-CN.md)
+- [ESEM MVP Runnable Path (ZH)](esem-mvp-run.zh-CN.md)
 
 ## Current scope
 

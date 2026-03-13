@@ -10,6 +10,12 @@
 当前日期：2026-03-12  
 适用分支：`main`
 
+执行进度（更新）：
+
+1. 已落地最小可跑入口：`run_esem_workflow(data, spec, config)`；
+2. 已支持 `block_full` 单候选策略、基础 judge（`convergence/fit_indices/efa_bridge`）与 `best_score` 选择；
+3. 其余多候选策略与可插拔注册体系仍按本文档后续 Step 推进。
+
 ---
 
 ## 1. 本文档要解决的问题

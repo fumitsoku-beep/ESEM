@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is inspired by Keep a Changelog, and this project currently uses pre-release versioning during the alpha stage.
 
+## [Unreleased]
+
+### Added
+- Initial runnable ESEM MVP workflow entry: `run_esem_workflow(...)`.
+- New `psysem.esem` module contracts for workflow/candidate/judge results.
+- Example script: `examples/basic_esem.py`.
+- Integration tests for ESEM MVP workflow path.
+- Documentation page: `docs/esem-mvp-run.zh-CN.md`.
+
 ## [0.1.0a0] - 2026-03-12
 
 ### Added

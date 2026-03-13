@@ -75,8 +75,9 @@ spec = {
 - 已实现：EFA 提取法 `paf`、`pca`、`minres`
 - 已实现：EFA 旋转法 `none`、`varimax`、`promax`、`oblimin`、`geomin`、`target`
 - 已实现：`target rotation` 的目标矩阵、目标权重、多起点重启与随机种子控制
-- 进行中：`SEMModel.fit(data, spec=...)` 主入口接入
-- 后续：更严格 structural 语法解析 + ESEM 估计器实现
+- 已实现：`SEMModel.fit(data, spec=...)` 主入口（ML 原型路径）
+- 新增：`run_esem_workflow(...)` 最小可跑路径（`block_full` 候选）
+- 后续：多候选 generator/judge/selector、更完整 ESEM 估计器
 
 ## 当前 EFA `target rotation` 说明
 
@@ -88,3 +89,38 @@ spec = {
 - `random_state`：用于保证重启可复现。
 
 这使得当前 EFA 已可以表达较基础的 target-pattern 旋转需求，并为后续 ESEM block workflow 做准备。
+
+## 最小可跑 ESEM 入口（MVP）
+
+```python
+import pandas as pd
+from psysem import ESEMWorkflowConfig, SEMFitConfig, run_esem_workflow
+
+data = pd.read_csv("examples/data/efa_demo_input.csv")
+items = list(data.columns)
+
+spec_payload = {
+    "blocks": [{"name": "demo", "items": items, "n_factors": 2}],
+    "estimator": "ML",
+    "variable_types": {item: "continuous" for item in items},
+}
+
+workflow = run_esem_workflow(
+    data,
+    spec_payload,
+    ESEMWorkflowConfig(
+        fit_config=SEMFitConfig(max_iter=200, restarts=1, random_seed=42),
+    ),
+)
+
+print(workflow.best_candidate_id)
+print(workflow.comparison_table)
+```
+
+预期输出结构（示例）：
+
+```text
+Best candidate: block_full
+Comparison table: (含 candidate_id / total_score / cfi / rmsea / srmr ...)
+SEM summary: (Converged, Estimator, Fit indices, Warnings)
+```
