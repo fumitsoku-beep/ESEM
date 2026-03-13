@@ -34,6 +34,16 @@ def _extract_minres_method(corr: NDArray[np.float64], config: EFAConfig):
     )
 
 
+def _extract_ml_method(corr: NDArray[np.float64], config: EFAConfig):
+    return _extract_ml(
+        corr=corr,
+        n_factors=config.n_factors,
+        max_iter=config.max_iter,
+        tol=config.tol,
+        min_uniqueness=config.min_uniqueness,
+    )
+
+
 def _extract_pca(
     corr: NDArray[np.float64],
     n_factors: int,
@@ -126,6 +136,65 @@ def _extract_minres(
         reproduced_offdiag = loadings @ loadings.T
         residual_offdiag = corr - reproduced_offdiag
         return float(np.sum(residual_offdiag[upper] ** 2))
+
+    optimization = minimize(
+        objective,
+        x0=initial_uniquenesses,
+        method="L-BFGS-B",
+        bounds=bounds,
+        options={"maxiter": max_iter, "ftol": tol},
+    )
+
+    optimized_uniquenesses = np.clip(
+        np.asarray(optimization.x, dtype=float),
+        min_uniqueness,
+        1.0 - min_uniqueness,
+    )
+    loadings, communalities = _loadings_from_uniquenesses(
+        corr=corr,
+        uniquenesses=optimized_uniquenesses,
+        n_factors=n_factors,
+    )
+    n_iter = int(getattr(optimization, "nit", 0))
+    converged = bool(optimization.success)
+    return loadings, communalities, n_iter, converged
+
+
+def _extract_ml(
+    corr: NDArray[np.float64],
+    n_factors: int,
+    max_iter: int,
+    tol: float,
+    min_uniqueness: float,
+) -> tuple[NDArray[np.float64], NDArray[np.float64], int, bool]:
+    """Estimate common-factor loadings via Gaussian maximum likelihood."""
+
+    p = corr.shape[0]
+    smc = _squared_multiple_correlations(corr)
+    initial_uniquenesses = np.clip(1.0 - smc, min_uniqueness, 1.0 - min_uniqueness)
+    bounds = [(min_uniqueness, 1.0 - min_uniqueness) for _ in range(p)]
+    _, corr_logdet = np.linalg.slogdet(corr)
+
+    def objective(uniquenesses: NDArray[np.float64]) -> float:
+        loadings, communalities = _loadings_from_uniquenesses(
+            corr=corr,
+            uniquenesses=uniquenesses,
+            n_factors=n_factors,
+        )
+        implied_uniquenesses = np.clip(1.0 - communalities, min_uniqueness, 1.0 - min_uniqueness)
+        reproduced = loadings @ loadings.T + np.diag(implied_uniquenesses)
+        reproduced = (reproduced + reproduced.T) / 2.0
+
+        sign, reproduced_logdet = np.linalg.slogdet(reproduced)
+        if sign <= 0:
+            return float("inf")
+
+        smallest_eigenvalue = float(np.min(np.linalg.eigvalsh(reproduced)))
+        if smallest_eigenvalue <= 1e-10:
+            return float("inf")
+
+        reproduced_inv = np.linalg.inv(reproduced)
+        return float(reproduced_logdet + np.trace(corr @ reproduced_inv) - corr_logdet - p)
 
     optimization = minimize(
         objective,

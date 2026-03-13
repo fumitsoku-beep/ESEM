@@ -1,6 +1,6 @@
 # psysem Docs
 
-This is the initial documentation placeholder for `psysem`.
+本页是当前 `psysem` 文档入口，按 **EFA / SEM / ESEM** 三条主线整理。
 
 ## Current Flow Diagrams
 
@@ -24,39 +24,36 @@ This is the initial documentation placeholder for `psysem`.
 
 ![EFA flow](assets/images/flow-efa-current.zh-CN.png)
 
-## EFA Implementation Docs
+## 核心文档
+
+### EFA
 
 - [EFA Phase 1 Implementation (ZH)](efa-phase1-implementation.zh-CN.md)
-- [EFA Testing and Quality Gate (ZH)](efa-testing.zh-CN.md)
 - [EFA Method Expansion Roadmap (ZH)](efa-method-expansion-roadmap.zh-CN.md)
-- [EFA Internal Interface Refactor (ZH)](efa-internal-interface-refactor.zh-CN.md)
 
-## SEM Planning Docs
+### SEM
 
 - [SEM Phase Implementation (ZH)](sem-phase-implementation.zh-CN.md)
-- [SEM Next Steps (ZH)](sem-next-steps.zh-CN.md)
 
-## ESEM Baseline Research
+### ESEM
 
-- [ESEM Ecosystem and Practice Baseline (ZH)](esem-baseline-landscape.zh-CN.md)
 - [ESEM Modular Workflow Plan (ZH)](esem-modular-workflow.zh-CN.md)
 - [ESEM MVP Runnable Path (ZH)](esem-mvp-run.zh-CN.md)
 
-## Current scope
+### Research
 
-- Package skeleton
-- Public API stubs
-- Smoke tests and CI setup
-- `psysem.data` module for ESEM spec/data validation
-- `psysem.efa` Phase 1: diagnostics (KMO/Bartlett) and factor-count suggestion (PA/MAP/Scree/Kaiser)
-- `psysem.efa` Phase 2 (basic): candidate fitting, model scoring, and best factor-count selection
-- `psysem.efa` Phase 3 (in progress): modular interpretation output (`item_table`, `factor_table`, `residual_top_pairs`)
-- Expanded EFA test suite: validation, edge cases, reproducibility, and workflow integration
-- `psysem` SEM Phase 3 (batch 7): measurement/structural parameter-index mapping (`Lambda/Theta`, `Beta/Gamma/Psi`), fit-result integration, ML implied-covariance optimization prototype, numerical inference prototype (`SE/z/p/CI`), basic fit-index computation (`AIC/BIC/SRMR/CFI/TLI/RMSEA`), and optimization robustness prototype (`SEMFitConfig`/restarts/failure diagnostics)
+- [ESEM Ecosystem and Practice Baseline (ZH)](esem-baseline-landscape.zh-CN.md)
 
-## Next milestones
+## 当前范围
 
-- ESEM measurement-layer assembly from block-level models
-- Structural SEM layer over measurement model
-- Expanded rotations and extraction methods for EFA
-- Psychology-focused reporting helpers
+- `psysem.data` 已覆盖 ESEM `spec` / 数据输入校验
+- `psysem.efa` 已具备诊断、因子数建议、候选评分与解释层基础能力
+- EFA 提取/旋转已扩展到 `minres`、`promax`、`oblimin`、`geomin`、`target`
+- `psysem` SEM 已具备 measurement/structural 参数映射、ML 原型优化、基础推断与基础拟合指标
+- ESEM 已具备最小可跑 workflow，可输出候选比较结果与最佳候选
+
+## 建议阅读顺序
+
+1. 如果要看“当前怎么用”，先读 [docs/parameters.zh-CN.md](parameters.zh-CN.md)、[docs/esem-mvp-run.zh-CN.md](esem-mvp-run.zh-CN.md)。
+2. 如果要看“EFA 现在到哪一步”，读 [docs/efa-phase1-implementation.zh-CN.md](efa-phase1-implementation.zh-CN.md) 与 [docs/efa-method-expansion-roadmap.zh-CN.md](efa-method-expansion-roadmap.zh-CN.md)。
+3. 如果要看“SEM / ESEM 接下来怎么推进”，读 [docs/sem-phase-implementation.zh-CN.md](sem-phase-implementation.zh-CN.md) 与 [docs/esem-modular-workflow.zh-CN.md](esem-modular-workflow.zh-CN.md)。

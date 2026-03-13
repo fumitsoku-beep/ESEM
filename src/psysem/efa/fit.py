@@ -7,7 +7,13 @@ import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
 
-from .extraction import _extract_minres_method, _extract_paf_method, _extract_pca_method
+from .extraction import (
+    _extract_minres_method,
+    _extract_ml_method,
+    _extract_paf_method,
+    _extract_pca_method,
+)
+from .input_matrix import build_efa_input_matrix
 from .rotation import (
     _coerce_rotation_target,
     _coerce_rotation_target_weights,
@@ -27,6 +33,9 @@ class EFAConfig:
     n_factors: int
     extraction: str = "paf"
     rotation: str = "varimax"
+    missing_strategy: str = "pairwise"
+    correlation_method: str = "pearson"
+    variable_types: dict[str, str] | None = None
     rotation_target: pd.DataFrame | NDArray[np.float64] | None = None
     rotation_target_weights: pd.DataFrame | NDArray[np.float64] | None = None
     rotation_restarts: int = 0
@@ -128,9 +137,8 @@ def fit_efa(data: pd.DataFrame, config: EFAConfig) -> EFAResult:
     extraction_method = get_extraction_method(extraction)
     rotation_method = get_rotation_method(rotation)
 
-    # EFA is run on the item correlation matrix (standardized scale).
-    corr = data.loc[:, list(config.items)].corr().to_numpy(dtype=float)
-    corr = _stabilize_correlation(corr)
+    prepared_input = build_efa_input_matrix(data, config)
+    corr = prepared_input.corr
 
     extraction_result = _normalize_extraction_output(extraction_method(corr, config))
 
@@ -157,10 +165,12 @@ def fit_efa(data: pd.DataFrame, config: EFAConfig) -> EFAResult:
         residual_summary=components.residual_summary,
         min_uniqueness=config.min_uniqueness,
     )
-    warnings = list(extraction_result.warnings) + list(rotation_result.warnings) + warnings
+    if not extraction_result.converged:
+        warnings.insert(0, "Extraction did not converge within configured optimizer settings.")
+    warnings = list(prepared_input.warnings) + list(extraction_result.warnings) + list(rotation_result.warnings) + warnings
 
     factor_names = [f"F{i + 1}" for i in range(config.n_factors)]
-    item_names = list(config.items)
+    item_names = list(prepared_input.item_names)
     return EFAResult(
         loadings=pd.DataFrame(rotation_result.loadings, index=item_names, columns=factor_names),
         communalities=pd.Series(components.communalities, index=item_names, name="communality"),
@@ -204,6 +214,25 @@ def _validate_inputs(data: pd.DataFrame, config: EFAConfig) -> None:
         raise ValueError("`rotation_restarts` must be >= 0.")
     if not (0.0 < config.min_uniqueness < 1.0):
         raise ValueError("`min_uniqueness` must be between 0 and 1.")
+    missing_strategy = config.missing_strategy.strip().lower()
+    if missing_strategy not in {"pairwise", "dropna"}:
+        raise ValueError("`missing_strategy` must be one of: pairwise, dropna.")
+    correlation_method = config.correlation_method.strip().lower()
+    if correlation_method not in {"pearson", "spearman", "polychoric"}:
+        raise ValueError("`correlation_method` must be one of: pearson, spearman, polychoric.")
+    if config.variable_types is not None:
+        invalid_names = [name for name in config.variable_types if name not in config.items]
+        if invalid_names:
+            joined = ", ".join(sorted(invalid_names))
+            raise ValueError(f"`variable_types` contains items not present in `items`: {joined}.")
+        invalid_types = [
+            name for name, kind in config.variable_types.items() if kind.strip().lower() not in {"continuous", "ordinal"}
+        ]
+        if invalid_types:
+            joined = ", ".join(sorted(invalid_types))
+            raise ValueError(
+                f"`variable_types` entries must be `continuous` or `ordinal`; invalid entries for: {joined}."
+            )
 
     missing = [column for column in config.items if column not in data.columns]
     if missing:
@@ -299,6 +328,7 @@ def _ensure_default_methods() -> None:
         return
 
     _EXTRACTION_REGISTRY.setdefault("paf", _extract_paf_method)
+    _EXTRACTION_REGISTRY.setdefault("ml", _extract_ml_method)
     _EXTRACTION_REGISTRY.setdefault("minres", _extract_minres_method)
     _EXTRACTION_REGISTRY.setdefault("pca", _extract_pca_method)
     _ROTATION_REGISTRY.setdefault("none", _rotate_none)
@@ -401,14 +431,6 @@ def _compute_communalities(
     reproduced_common = loadings @ factor_corr @ loadings.T
     communalities = np.diag(reproduced_common)
     return np.clip(communalities, 0.0, 1.0)
-
-
-def _stabilize_correlation(corr: NDArray[np.float64]) -> NDArray[np.float64]:
-    # Ensure symmetry and positive numeric stability for eigendecomposition.
-    corr = np.nan_to_num(corr, nan=0.0, posinf=0.0, neginf=0.0)
-    corr = (corr + corr.T) / 2.0
-    np.fill_diagonal(corr, 1.0)
-    return corr
 
 
 def _compute_item_complexity(loadings: NDArray[np.float64]) -> NDArray[np.float64]:

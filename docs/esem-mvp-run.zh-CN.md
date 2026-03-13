@@ -87,10 +87,10 @@ python examples/basic_esem.py
 
 结合 [esem-modular-workflow.zh-CN.md](esem-modular-workflow.zh-CN.md) 和当前代码状态，建议按下面顺序推进：
 
-1. **P0**：实现 generator 注册机制（Step 2）  
-2. **P0**：新增第二个候选策略 `efa_seeded`（Step 4）  
-3. **P0**：实现 judge 注册机制（Step 6）并把当前 judge 改为可插拔  
-4. **P0**：实现 selector 扩展（Step 12），支持多候选稳定选择  
+1. **P0**：实现 generator 注册机制（Step 2）
+2. **P0**：新增第二个候选策略 `efa_seeded`（Step 4）
+3. **P0**：实现 judge 注册机制（Step 6）并把当前 judge 改为可插拔
+4. **P0**：实现 selector 扩展（Step 12），支持多候选稳定选择
 5. **P1**：补充端到端回归测试与多策略比较测试（Step 15）
 
 ---
@@ -99,4 +99,4 @@ python examples/basic_esem.py
 
 1. [ESEM 模块化判断工作流实施文档（ZH）](esem-modular-workflow.zh-CN.md)
 2. [SEM Phase 实施文档（ZH）](sem-phase-implementation.zh-CN.md)
-3. [SEM 后续实施路线图（ZH）](sem-next-steps.zh-CN.md)
+3. [SEM Phase 实施文档（ZH）](sem-phase-implementation.zh-CN.md)

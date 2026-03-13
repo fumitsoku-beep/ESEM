@@ -11,12 +11,12 @@
 
 ## 1. Phase 总览（1-4）
 
-| Phase | 目标 | 产出 | 状态 |
-| --- | --- | --- | --- |
-| Phase 1 | 诊断与因子数建议 | `KMO`、`Bartlett`、`PA`、`MAP`、`Scree`、`Kaiser` | 已完成 |
-| Phase 2 | 自动化候选拟合与最优因子数选择 | 候选比较表、`best_n_factors`、综合评分 | 已完成（基础版） |
-| Phase 3 | R 风格解读输出增强 | `h2/u2/com`、残差摘要、因子结构告警 | 进行中（已完成模块化解释层首版） |
-| Phase 4（可选） | 高级方法与性能优化 | ML 提取、斜交旋转扩展、并行与 bootstrap | 可选 |
+| Phase           | 目标                           | 产出                                              | 状态                             |
+| --------------- | ------------------------------ | ------------------------------------------------- | -------------------------------- |
+| Phase 1         | 诊断与因子数建议               | `KMO`、`Bartlett`、`PA`、`MAP`、`Scree`、`Kaiser` | 已完成                           |
+| Phase 2         | 自动化候选拟合与最优因子数选择 | 候选比较表、`best_n_factors`、综合评分            | 已完成（基础版）                 |
+| Phase 3         | R 风格解读输出增强             | `h2/u2/com`、残差摘要、因子结构告警               | 进行中（已完成模块化解释层首版） |
+| Phase 4（可选） | 高级方法与性能优化             | ML 提取、斜交旋转扩展、并行与 bootstrap           | 可选                             |
 
 ---
 
@@ -24,10 +24,10 @@
 
 Phase 3 已落地（首版）：
 
-1. 新增 `interpret_efa(result, config=...)`，返回 `EFAInterpretationResult`。  
-2. 新增 `EFAInterpretationConfig`，统一解读阈值与残差 Top-N 参数。  
-3. `EFAWorkflowConfig` 新增 `interpretation` 与 `include_interpretation`。  
-4. `EFAWorkflowResult` 新增 `candidate_interpretations` 与 `best_interpretation`。  
+1. 新增 `interpret_efa(result, config=...)`，返回 `EFAInterpretationResult`。
+2. 新增 `EFAInterpretationConfig`，统一解读阈值与残差 Top-N 参数。
+3. `EFAWorkflowConfig` 新增 `interpretation` 与 `include_interpretation`。
+4. `EFAWorkflowResult` 新增 `candidate_interpretations` 与 `best_interpretation`。
 5. 已补充对应测试与示例脚本输出。
 
 ---
@@ -36,15 +36,15 @@ Phase 3 已落地（首版）：
 
 ### 2.1 目标
 
-1. 在 EFA 拟合前给出“是否适合做 EFA”的诊断结果。  
-2. 给出“建议因子数”的多方法结果，不绑定单一规则。  
-3. 提供可调参数，便于自动化搜索和后续优化。  
+1. 在 EFA 拟合前给出“是否适合做 EFA”的诊断结果。
+2. 给出“建议因子数”的多方法结果，不绑定单一规则。
+3. 提供可调参数，便于自动化搜索和后续优化。
 4. 与现有 `fit_efa(...)` 保持兼容，不破坏当前 API。
 
 ### 2.2 非目标（Phase 1 不做）
 
-1. 不实现完整 ML-EFA 拟合统计（留给 Phase 4）。  
-2. 不实现 oblimin/promax（留给 Phase 4）。  
+1. 不实现完整 ML-EFA 拟合统计（留给 Phase 4）。
+2. 不实现 oblimin/promax（留给 Phase 4）。
 3. 不做复杂报告渲染（留给 Phase 3/5）。
 
 ---
@@ -79,9 +79,9 @@ tests/
 
 实现内容：
 
-1. 新建 `efa/contracts.py`。  
-2. 增加 `EFADiagnosticsConfig`、`EFADiagnosticsResult`。  
-3. 增加 `FactorSelectionConfig`、`FactorSelectionResult`。  
+1. 新建 `efa/contracts.py`。
+2. 增加 `EFADiagnosticsConfig`、`EFADiagnosticsResult`。
+3. 增加 `FactorSelectionConfig`、`FactorSelectionResult`。
 4. 统一字段命名，避免后续重复改名。
 
 落地文件：
@@ -91,8 +91,8 @@ tests/
 
 完成标准：
 
-1. 所有 dataclass 有类型注解。  
-2. `mypy src` 不报错。  
+1. 所有 dataclass 有类型注解。
+2. `mypy src` 不报错。
 3. 字段命名满足后续 Phase 2 复用。
 
 ---
@@ -101,8 +101,8 @@ tests/
 
 实现内容：
 
-1. 统一“选定题项 -> 相关矩阵”的逻辑，供 diagnostics/n_factors 共用。  
-2. 增加数值稳定处理：对称化、对角线修正、非数处理。  
+1. 统一“选定题项 -> 相关矩阵”的逻辑，供 diagnostics/n_factors 共用。
+2. 增加数值稳定处理：对称化、对角线修正、非数处理。
 3. 增加最小样本检查（例如 `n_obs >= n_items * 5` 仅给 warning）。
 
 落地文件：
@@ -111,8 +111,8 @@ tests/
 
 完成标准：
 
-1. 输入包含 NaN/inf 时有明确策略与错误信息。  
-2. 输出相关矩阵可用于特征分解。  
+1. 输入包含 NaN/inf 时有明确策略与错误信息。
+2. 输出相关矩阵可用于特征分解。
 3. 单元测试覆盖边界输入。
 
 ---
@@ -121,8 +121,8 @@ tests/
 
 实现内容：
 
-1. 根据相关矩阵和偏相关矩阵计算总体 KMO。  
-2. 输出逐题 MSA（每个变量一个值）。  
+1. 根据相关矩阵和偏相关矩阵计算总体 KMO。
+2. 输出逐题 MSA（每个变量一个值）。
 3. 增加常用解释区间（meritorious, middling, miserable 等）。
 
 落地文件：
@@ -132,8 +132,8 @@ tests/
 
 完成标准：
 
-1. 结果包含 `kmo_total` 和 `kmo_per_item`。  
-2. `kmo_total` 在 `[0, 1]`。  
+1. 结果包含 `kmo_total` 和 `kmo_per_item`。
+2. `kmo_total` 在 `[0, 1]`。
 3. 小矩阵、病态矩阵场景有可读报错。
 
 ---
@@ -142,8 +142,8 @@ tests/
 
 实现内容：
 
-1. 基于相关矩阵行列式计算卡方统计量。  
-2. 输出 `chi2`, `df`, `p_value`。  
+1. 基于相关矩阵行列式计算卡方统计量。
+2. 输出 `chi2`, `df`, `p_value`。
 3. 若矩阵不可逆/行列式异常，给出明确 warning。
 
 落地文件：
@@ -153,8 +153,8 @@ tests/
 
 完成标准：
 
-1. 正常输入返回完整检验结果。  
-2. 极端输入不会 silent failure。  
+1. 正常输入返回完整检验结果。
+2. 极端输入不会 silent failure。
 3. 结果可用于“是否建议继续 EFA”的判断。
 
 ---
@@ -163,9 +163,9 @@ tests/
 
 实现内容：
 
-1. 在 `n_iter` 次随机数据中计算随机相关矩阵特征值分布。  
-2. 支持百分位阈值（如 `95th percentile`）。  
-3. 将真实特征值与随机阈值比较，给出建议因子数。  
+1. 在 `n_iter` 次随机数据中计算随机相关矩阵特征值分布。
+2. 支持百分位阈值（如 `95th percentile`）。
+3. 将真实特征值与随机阈值比较，给出建议因子数。
 4. 支持 `random_state` 保证可复现。
 
 落地文件：
@@ -175,8 +175,8 @@ tests/
 
 完成标准：
 
-1. 输出包含真实特征值、随机阈值、建议因子数。  
-2. 重复运行（同 seed）结果一致。  
+1. 输出包含真实特征值、随机阈值、建议因子数。
+2. 重复运行（同 seed）结果一致。
 3. 计算耗时在可接受范围（默认参数下）。
 
 ---
@@ -185,8 +185,8 @@ tests/
 
 实现内容：
 
-1. 对不同 `k` 计算残差相关矩阵均方（或部分相关均方）。  
-2. 选择 MAP 最小处作为建议因子数。  
+1. 对不同 `k` 计算残差相关矩阵均方（或部分相关均方）。
+2. 选择 MAP 最小处作为建议因子数。
 3. 输出每个 `k` 的 MAP 值序列。
 
 落地文件：
@@ -196,8 +196,8 @@ tests/
 
 完成标准：
 
-1. `k` 范围可配置（`n_min, n_max`）。  
-2. MAP 曲线可直接用于后续可视化。  
+1. `k` 范围可配置（`n_min, n_max`）。
+2. MAP 曲线可直接用于后续可视化。
 3. 边界 `k` 场景有防护（避免越界）。
 
 ---
@@ -206,8 +206,8 @@ tests/
 
 实现内容：
 
-1. 计算排序特征值。  
-2. Kaiser：特征值 > 1 的个数。  
+1. 计算排序特征值。
+2. Kaiser：特征值 > 1 的个数。
 3. Scree：先给“原始特征值序列 + 建议拐点算法结果（可选）”。
 
 落地文件：
@@ -217,8 +217,8 @@ tests/
 
 完成标准：
 
-1. 输出可直接用于画 scree 图。  
-2. Kaiser 与 PA/MAP 可以并列比较。  
+1. 输出可直接用于画 scree 图。
+2. Kaiser 与 PA/MAP 可以并列比较。
 3. 不把 Kaiser 作为唯一建议来源。
 
 ---
@@ -227,9 +227,9 @@ tests/
 
 实现内容：
 
-1. 新增统一函数 `suggest_n_factors(...)`。  
-2. 返回 `method -> suggestion` 明细。  
-3. 给出 `consensus_n_factors`（默认多数投票，平局取较小值）。  
+1. 新增统一函数 `suggest_n_factors(...)`。
+2. 返回 `method -> suggestion` 明细。
+3. 给出 `consensus_n_factors`（默认多数投票，平局取较小值）。
 4. 输出 warnings（例如方法间分歧较大）。
 
 落地文件：
@@ -240,8 +240,8 @@ tests/
 
 完成标准：
 
-1. 一次调用可拿到完整建议对象。  
-2. 每个方法都可独立开关。  
+1. 一次调用可拿到完整建议对象。
+2. 每个方法都可独立开关。
 3. 聚合策略可配置（后续 Phase 2 复用）。
 
 ---
@@ -250,8 +250,8 @@ tests/
 
 实现内容：
 
-1. 在 `__init__.py` 导出新 API。  
-2. 新增或更新示例脚本，展示诊断 + 因子数建议。  
+1. 在 `__init__.py` 导出新 API。
+2. 新增或更新示例脚本，展示诊断 + 因子数建议。
 3. README 增加 “Phase 1 API 用法” 小节。
 
 落地文件：
@@ -262,8 +262,8 @@ tests/
 
 完成标准：
 
-1. 用户可在 10 行内调用完整诊断流程。  
-2. 示例输出可复现。  
+1. 用户可在 10 行内调用完整诊断流程。
+2. 示例输出可复现。
 3. 与旧 `fit_efa` 用法兼容。
 
 ---
@@ -272,8 +272,8 @@ tests/
 
 实现内容：
 
-1. 补全单元测试覆盖关键数学路径与边界场景。  
-2. 运行 `ruff`, `mypy`, `pytest`。  
+1. 补全单元测试覆盖关键数学路径与边界场景。
+2. 运行 `ruff`, `mypy`, `pytest`。
 3. 增加最小回归数据集，防止未来重构破坏建议因子数逻辑。
 
 落地文件：
@@ -283,8 +283,8 @@ tests/
 
 完成标准：
 
-1. `pytest` 全绿。  
-2. 新增测试对失败信息有断言。  
+1. `pytest` 全绿。
+2. 新增测试对失败信息有断言。
 3. CI 可稳定通过。
 
 ---
@@ -312,55 +312,113 @@ sel = suggest_n_factors(data, FactorSelectionConfig(items=("i1", "i2", "i3", "i4
 
 ## 6. 参数表（Phase 1）
 
-| 参数 | 默认值 | 说明 |
-| --- | --- | --- |
-| `n_min` | `1` | 搜索最小因子数 |
-| `n_max` | `min(8, n_items - 1)` | 搜索最大因子数 |
-| `pa_iter` | `500` | Parallel Analysis 随机重采样次数 |
-| `pa_percentile` | `0.95` | PA 比较分位数 |
-| `random_state` | `None` | 随机种子（建议固定） |
-| `enable_map` | `True` | 是否运行 MAP |
-| `enable_pa` | `True` | 是否运行 PA |
-| `enable_kaiser` | `True` | 是否运行 Kaiser |
-| `enable_scree` | `True` | 是否输出 scree 数据 |
-| `consensus_strategy` | `majority_min_tie` | 聚合策略：`majority_min_tie`、`weighted_vote`、`stability_first`、`median_floor` |
-| `consensus_weights` | `None` | `weighted_vote` 时的方法权重配置（未指定方法默认 `1.0`） |
+| 参数                 | 默认值                | 说明                                                                             |
+| -------------------- | --------------------- | -------------------------------------------------------------------------------- |
+| `n_min`              | `1`                   | 搜索最小因子数                                                                   |
+| `n_max`              | `min(8, n_items - 1)` | 搜索最大因子数                                                                   |
+| `pa_iter`            | `500`                 | Parallel Analysis 随机重采样次数                                                 |
+| `pa_percentile`      | `0.95`                | PA 比较分位数                                                                    |
+| `random_state`       | `None`                | 随机种子（建议固定）                                                             |
+| `enable_map`         | `True`                | 是否运行 MAP                                                                     |
+| `enable_pa`          | `True`                | 是否运行 PA                                                                      |
+| `enable_kaiser`      | `True`                | 是否运行 Kaiser                                                                  |
+| `enable_scree`       | `True`                | 是否输出 scree 数据                                                              |
+| `consensus_strategy` | `majority_min_tie`    | 聚合策略：`majority_min_tie`、`weighted_vote`、`stability_first`、`median_floor` |
+| `consensus_weights`  | `None`                | `weighted_vote` 时的方法权重配置（未指定方法默认 `1.0`）                         |
 
 ---
 
 ## 7. 验收标准（Definition of Done）
 
-1. `run_efa_diagnostics` 可稳定输出 KMO + Bartlett。  
-2. `suggest_n_factors` 可同时输出 PA/MAP/Kaiser/Scree 结果。  
-3. 有聚合建议 `consensus_n_factors`，且策略可配置。  
-4. 文档、示例、测试齐全并通过质量门禁。  
+1. `run_efa_diagnostics` 可稳定输出 KMO + Bartlett。
+2. `suggest_n_factors` 可同时输出 PA/MAP/Kaiser/Scree 结果。
+3. 有聚合建议 `consensus_n_factors`，且策略可配置。
+4. 文档、示例、测试齐全并通过质量门禁。
 5. 与现有 `fit_efa` 保持向后兼容。
 
 ---
 
 ## 8. 测试文档
 
-EFA 测试覆盖与质量门禁详见：
-
-- [EFA 测试与质量门禁（ZH）](efa-testing.zh-CN.md)
+EFA 测试覆盖与质量门禁已整合到本页，见下文“测试与质量门禁（整合）”。
 
 ---
 
 ## 9. 风险与缓解
 
 1. 风险：小样本导致相关矩阵不稳定。  
-缓解：增加样本充足性 warning，不直接静默失败。  
+   缓解：增加样本充足性 warning，不直接静默失败。
 
 2. 风险：不同方法建议差异大。  
-缓解：输出方法分歧警告，不强行给单一结论。  
+   缓解：输出方法分歧警告，不强行给单一结论。
 
 3. 风险：计算成本偏高（PA）。  
-缓解：支持 `pa_iter` 调参与可复现 seed。
+   缓解：支持 `pa_iter` 调参与可复现 seed。
 
 ---
 
 ## 10. 下一步执行顺序
 
-1. 先实现 `contracts.py` + `diagnostics.py`（Step 1-4）。  
-2. 再实现 `n_factors.py`（Step 5-8）。  
+1. 先实现 `contracts.py` + `diagnostics.py`（Step 1-4）。
+2. 再实现 `n_factors.py`（Step 5-8）。
 3. 最后接入 API/示例/测试（Step 9-10）。
+
+---
+
+## 11. 测试与质量门禁（已整合原独立测试文档）
+
+本节汇总 `psysem.efa` 当前测试覆盖范围、运行方式与质量门禁，避免实现文档与测试文档分离维护。
+
+### 11.1 覆盖模块
+
+| 模块                | 关键测试点                                                                  |
+| ------------------- | --------------------------------------------------------------------------- |
+| `fit.py`            | 输入校验、方法注册、`PAF/PCA/MINRES` 拟合、旋转结果、残差矩阵性质、告警触发 |
+| `diagnostics.py`    | `KMO/Bartlett` 计算、缺失值策略、常量项告警、奇异相关矩阵容错               |
+| `n_factors.py`      | `PA/MAP/Scree/Kaiser`、共识策略、参数边界、可复现性                         |
+| `evaluation.py`     | 评分公式稳定性、阈值校验、空显著因子告警、表格导出                          |
+| `interpretation.py` | 题项表/因子表、残差 Top-N、阈值合法性、解读告警                             |
+| `workflow.py`       | 端到端流程、候选策略、手动候选、配置一致性、解释层开关                      |
+
+### 11.2 覆盖维度
+
+1. 正常路径：可在合成数据上稳定输出结果。
+2. 边界路径：`n_min/n_max`、阈值范围、空输入、缺失输入。
+3. 错误路径：非法参数触发明确异常信息。
+4. 数值路径：奇异相关矩阵、常量项、低样本比等场景可诊断。
+5. 可复现性：固定随机种子后，PA 阈值与建议结果稳定。
+6. API 路径：顶层导出与 workflow 返回结构一致。
+
+### 11.3 测试文件
+
+| 文件                               | 关注点                                         |
+| ---------------------------------- | ---------------------------------------------- |
+| `tests/test_efa.py`                | `fit_efa`、方法注册、提取与旋转扩展            |
+| `tests/test_efa_diagnostics.py`    | 诊断入口与前置数据质量                         |
+| `tests/test_efa_n_factors.py`      | 因子数建议与聚合策略                           |
+| `tests/test_efa_evaluation.py`     | 候选评分逻辑                                   |
+| `tests/test_efa_interpretation.py` | Phase 3 解释层输出                             |
+| `tests/test_efa_workflow.py`       | 诊断 -> 建议 -> 拟合 -> 评分 -> 解释端到端流程 |
+
+### 11.4 运行命令
+
+全量质量门禁：
+
+```bash
+python -m ruff check .
+python -m mypy src
+python -m pytest -q
+```
+
+仅运行 EFA 相关测试：
+
+```bash
+python -m pytest tests/test_efa.py tests/test_efa_* -q
+```
+
+### 11.5 质量门禁标准
+
+1. `ruff` 无 lint 错误。
+2. `mypy` 在 `src` 下无类型错误。
+3. `pytest` 全部通过。
+4. EFA 新增/变更功能必须包含至少 1 个正常路径与 1 个边界/异常路径测试。

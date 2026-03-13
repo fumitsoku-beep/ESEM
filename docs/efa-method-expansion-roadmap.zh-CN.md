@@ -19,8 +19,8 @@
 
 ### 1.1 拟合方法
 
-- 提取方法：`paf`、`pca`
-- 旋转方法：`none`、`varimax`
+- 提取方法：`paf`、`pca`、`minres`、`ml`
+- 旋转方法：`none`、`varimax`、`promax`、`oblimin`、`geomin`、`target`
 
 见 [src/psysem/efa/fit.py](../src/psysem/efa/fit.py#L213-L216)。
 
@@ -39,11 +39,11 @@
 
 当前限制主要有：
 
-1. 斜交旋转尚未落地；
-2. 适合心理测量的常用提取法仍偏少；
-3. 缺失值处理仍以 `dropna` 为主；
-4. 相关矩阵目前主要是普通相关矩阵；
-5. 面向 ordinal 数据和 ESEM 的方法尚未成体系。
+1. `uls`、`gls` 等提取法尚未落地；
+2. 缺失处理与相关矩阵构造仍未形成显式、可配置的统一输入层；
+3. 相关矩阵目前主要是普通相关矩阵；
+4. 面向 ordinal 数据和 ESEM 的方法尚未成体系；
+5. 已落地的斜交旋转仍需继续加强数值稳定性与 ESEM 衔接。
 
 ---
 
@@ -51,35 +51,34 @@
 
 ## P0：优先添加
 
-这些方法与 `psysem` 当前路线最契合，投入产出比最高。
+这些能力与 `psysem` 当前路线最契合，投入产出比最高。
 
-1. `minres`
-2. `promax`
-3. `oblimin`
-4. `geomin`
+1. 输入预处理层（`missing_strategy` + `correlation_method`）
+2. `pairwise` 缺失处理
+3. `polychoric` 相关
+4. `vss`
 
 ### 为什么是 P0
 
-- `minres` 是非常常见的 EFA 提取法，能明显增强“真正做因子分析”的能力；
-- `promax` / `oblimin` 是心理测量里最常用的斜交旋转；
-- `geomin` 对后续 ESEM 路线特别重要，可自然衔接目标旋转和 block/ESEM 工作流。
+- `pairwise` 与 `polychoric` 从本质上看都不是单独的提取法，而是“输入矩阵构造策略”；
+- 如果不先抽出输入预处理层，后续会把缺失处理、相关矩阵类型、ordinal 支持继续堆进 `fit.py`；
+- 把输入层先做出来，能同时服务 `pairwise`、`spearman`、`polychoric`、`tetrachoric`，也更利于后续 ESEM workflow 复用。
 
 ---
 
 ## P1：第二批添加
 
-1. `ml`
-2. `pairwise` 缺失处理
-3. `polychoric` 相关
-4. `target rotation`
-5. `vss`
+1. `target rotation` / `geomin` 与 ESEM workflow 更深集成
+2. `spearman`
+3. `tetrachoric`
+4. `uls`
+5. `hull` / `ekc` 等保留方法增强
 
 ### 为什么是 P1
 
-- `ml` 能支持更完整的统计推断和模型比较；
-- `pairwise` 与 `polychoric` 对心理测量数据很关键；
 - `target rotation` 直接服务 ESEM；
-- `vss` 能让因子数建议更丰富。
+- `spearman` / `tetrachoric` 是输入层扩展的自然后续；
+- `uls` 与更多 retention 方法有价值，但紧迫性已经低于输入层补齐。
 
 ---
 
@@ -105,22 +104,322 @@
 
 建议按下面顺序逐个落地：
 
-1. `minres`
-2. `promax`
-3. `oblimin`
-4. `geomin`
-5. `ml`
-6. `pairwise`
-7. `polychoric`
-8. `target rotation`
-9. `vss`
+1. 抽输入预处理层（由 `fit_efa()` 统一调度）
+2. `pairwise`
+3. `spearman`
+4. `polychoric`
+5. `vss`
+6. `target rotation` / `geomin` 与 ESEM workflow 集成
 
 ### 理由
 
-- 先补 `minres` 与斜交旋转，可立刻提升 EFA 实用性；
-- 再补 `ml`，可为更严格的统计量和模型比较铺路；
-- 再补 `polychoric` / `target`，可更自然衔接 ESEM 与 ordinal 场景；
-- 最后再继续扩展更多选择方法。
+- 先把输入矩阵层抽出来，后续所有相关矩阵与缺失策略都会有统一入口；
+- 先做 `pairwise`，可以最小成本验证输入层设计是否合理；
+- 再做 `spearman` / `polychoric`，可以自然扩展到 ordinal 与非正态场景；
+- 最后再继续补保留方法与 ESEM 集成，而不是把这些逻辑继续塞回 `fit.py`。
+
+---
+
+## 3.1 当前已完成项（截至 2026-03-13）
+
+下列条目已不再是纯规划，而是已完成或已完成首版：
+
+1. `minres` 已实现。
+2. `promax` 已实现。
+3. `oblimin` 已实现。
+4. `geomin` 已实现，并已补多起点/重启相关加强。
+5. `target rotation` 已实现，并支持 `rotation_target`、`rotation_target_weights`。
+6. `ml` 已完成首版接入，可直接作为 `extraction="ml"` 使用。
+7. EFA 内部提取/旋转实现已从 `fit.py` 中拆分，分别进入 `extraction.py` 与 `rotation.py`。
+
+因此，本路线图从当前开始更适合作为：
+
+- 已完成项回顾；
+- 未完成项优先级管理；
+- 后续 ESEM 对接前的 EFA 方法清单。
+
+---
+
+## 3.2 内部实现前提（已整合原“EFA 内部接口重构思路文档”）
+
+在继续扩展 `ml`、`polychoric`、更复杂 target/geomin 变体之前，EFA 内部接口需要保持统一。当前整合后的核心原则如下：
+
+### 为什么要先整理内部接口
+
+因为 EFA 已经不再只有正交旋转与简单提取法，当前实现已经同时覆盖：
+
+1. 不同提取法的差异；
+2. 正交旋转与斜交旋转的差异；
+3. 方法级 warning / 收敛信息；
+4. ESEM 后续所需的 target/geomin 结果表达。
+
+如果继续沿用“方法返回简单元组”的方式，后续会持续放大以下问题：
+
+1. 新方法接入越来越脆弱；
+2. `fit_efa()` 主流程越来越难读；
+3. 斜交旋转结果难以统一表达；
+4. 自定义方法与测试基线更难稳定。
+
+### 当前已经完成的内部整理方向
+
+1. 提取与旋转实现已拆分到独立模块。
+2. 主流程已转向统一的内部标准化结果。
+3. 斜交旋转可稳定回传因子相关矩阵。
+4. `geomin` / `target` 已纳入同一类优化与重启思路。
+
+### 后续方法扩展必须遵守的原则
+
+1. **公开 API 尽量不变**：继续保持 `fit_efa(...)`、`run_efa_workflow(...)`、`EFAConfig`、`EFAResult` 稳定。
+2. **先标准化内部契约，再扩新方法**：避免继续堆特判逻辑。
+3. **兼容旧注册方式**：尽量不破坏已有自定义方法注册。
+4. **先把正交/斜交语义分清楚**：后续旋转都应明确 pattern / factor-correlation 语义。
+5. **测试先行**：每次内部改造都要用正交/斜交基线与 workflow 回归验证。
+
+### 对后续路线的直接影响
+
+这套内部整理使下面这些条目更容易继续推进：
+
+1. `ml`
+2. `polychoric`
+3. 更强的 `target rotation` 变体
+4. 与 ESEM 工作流的 `efa_seeded` / target-pattern 对接
+
+也就是说，这部分已经不再需要单独维护一篇独立文档，而应直接作为本路线图的实现前提。
+
+---
+
+## 3.3 输入预处理层应作为当前第一优先级
+
+### 当前进展（2026-03-13）
+
+输入预处理层已开始搭建第一步：
+
+1. 已新增 `src/psysem/efa/input_matrix.py`。
+2. `fit_efa()` 已改为通过输入层模块准备分析矩阵。
+3. 已在 `EFAConfig` 中加入 `missing_strategy`，当前支持：`pairwise`、`dropna`。
+4. 当前默认行为已显式化为 `missing_strategy="pairwise"`，以保持与 pandas 现有相关矩阵路径一致。
+5. 已在 `EFAConfig` 中加入 `correlation_method`，当前支持：`pearson`、`spearman`。
+6. 已在 `EFAConfig` 中加入可选 `variable_types`，用于声明 `continuous` / `ordinal`。
+7. 输入层已开始根据显式或推断的变量类型输出 recommendation warning，为后续 `auto` 设计打基础。
+8. 已完成 `polychoric` 的第一版接入，并将其作为 `correlation_method` 进入统一输入层管理。
+9. 当前 `polychoric` 首版采取“先保证 ordinal 契约清晰、先保证可运行与可 warning”的策略，后续再继续补数值稳健性与 metadata 输出。
+
+### 为什么要把它提升到最优先
+
+当前 `fit_efa()` 的输入路径本质上还是：
+
+1. 从 `data` 取列；
+2. 直接调用默认 Pearson 相关；
+3. 做一个基础稳定化；
+4. 交给 extraction。
+
+这条路径在方法少的时候足够，但在当前阶段已经开始限制后续扩展，因为：
+
+1. `pairwise` 是缺失处理策略，不属于提取法；
+2. `polychoric` 是 ordinal 相关矩阵构造，不属于提取法；
+3. `spearman` / `tetrachoric` 也都属于输入矩阵层；
+4. 如果不先抽这一层，后面每加一种输入策略，`fit.py` 都会变得更重。
+
+因此，当前最优先的不是再加一个单独方法名，而是先把“输入矩阵构造”升级成一个独立、可扩展的阶段。
+
+### 对 EFA 有什么帮助
+
+把输入预处理层单独做出来，对 EFA 有四个直接帮助：
+
+1. **统一管理缺失策略**：`dropna`、`pairwise` 不再散落在各方法里。
+2. **统一管理相关矩阵类型**：`pearson`、`spearman`、`polychoric` 可走同一入口。
+3. **提高方法扩展效率**：后续 extraction 继续只关心“吃什么矩阵”，不用知道矩阵是如何准备的。
+4. **更利于 ESEM 复用**：ESEM 后面要做 `efa_seeded`、target-pattern、ordinal block 时，也会需要同一套输入矩阵构造逻辑。
+
+### 一个重要原则：预处理层应“始终存在”，但策略应可选
+
+这里的“预处理层”不应理解成“是否额外对数据做复杂加工”的开关，而应理解成：
+
+1. EFA 在进入 extraction 之前，始终需要一个统一的输入矩阵准备阶段；
+2. 这个阶段内部采用什么策略，应当可配置、可切换、可逐步自动推荐；
+3. 因此真正的设计目标不是 `preprocess=True/False`，而是让：
+   - `missing_strategy` 可选；
+   - `correlation_method` 可选；
+   - 未来 `variable_types` / `auto` / recommendation 可选。
+
+换句话说：
+
+> **预处理层应该固定存在，但其中的处理策略不应写死。**
+
+这能保证：
+
+1. 公开入口仍然只有 `fit_efa()`；
+2. 用户既可以显式指定策略，也可以在后续使用自动推荐；
+3. extraction / rotation 无需知道原始数据类型和缺失处理细节。
+
+### 是否应该根据数据类型切换
+
+应该，而且建议分阶段实现。
+
+当前最稳的方向不是立刻做“黑箱自动切换”，而是先建立一套**显式配置 + 数据类型推荐**的机制：
+
+1. 连续、近似正态数据：优先 `pearson`；
+2. 非正态或轻量 ordinal 场景：可推荐 `spearman`；
+3. 明确的 Likert / ordinal 场景：可推荐 `polychoric`；
+4. 缺失较少但不想丢整行：可推荐 `pairwise`；
+5. 若 `dropna` 导致样本骤减，应给出 warning 而不是静默继续。
+
+因此，后续更合理的编码顺序应是：
+
+1. **先做显式配置**：`missing_strategy`、`correlation_method`；
+2. **再做数据类型识别与 recommendation**；
+3. **最后再考虑 `auto` 模式**。
+
+这样可以避免太早引入难以追踪的隐式行为。
+
+### 设计上应该放在哪里
+
+建议新增一个输入层模块，例如：
+
+```text
+src/psysem/efa/
+	input_matrix.py
+```
+
+并由 `fit_efa()` 统一调度，而不是让用户额外直接调用。也就是说：
+
+1. `fit.py` 继续作为公开入口；
+2. `input_matrix.py` 负责准备分析矩阵；
+3. `extraction.py` 只负责提取；
+4. `rotation.py` 只负责旋转。
+
+这样的职责划分最清楚，也最不容易把后续功能堆回总控文件。
+
+### 核心算法应该是什么样
+
+建议把输入预处理抽象成下面的统一流程：
+
+$$
+	ext{data} \rightarrow \text{missing handling} \rightarrow \text{correlation builder} \rightarrow \text{matrix stabilization} \rightarrow \text{extraction}
+$$
+
+对应的算法步骤可以分成四段：
+
+#### Step A：选列与基础校验
+
+1. 按 `config.items` 取分析变量；
+2. 检查列是否存在、是否全空、是否常量；
+3. 生成输入阶段 warning。
+
+#### Step B：缺失处理
+
+1. `dropna`：整行删除后再计算矩阵；
+2. `pairwise`：每个变量对使用该变量对可用样本计算相关；
+3. 记录每个变量对的有效样本量（后续可用于 warning）。
+
+#### Step C：相关矩阵构造
+
+1. `pearson`：连续变量默认基线；
+2. `spearman`：秩相关，用于非正态或轻量 ordinal 场景；
+3. `polychoric`：针对 ordinal 数据，基于潜在连续正态 + 阈值模型估计相关。
+
+#### Step C.1：数据类型识别与 recommendation（后续阶段）
+
+在 `correlation_method` 已经成型之后，建议增加一层轻量 recommendation，而不是直接替用户强制切换：
+
+1. 若变量是数值型且唯一值较多，可默认视为 `continuous`；
+2. 若变量唯一值较少（例如 5 点/7 点 Likert），可标记为“疑似 ordinal”；
+3. 若变量明显偏态或异常值影响较强，可推荐 `spearman`；
+4. 若大多数变量都像 ordinal，可推荐 `polychoric`；
+5. recommendation 先以 warning / metadata 形式出现，后续再考虑 `auto`。
+
+当前进展：该步骤已开始首版落地——目前已支持可选 `variable_types`，并会基于显式声明或轻量推断结果输出 recommendation warning；后续再继续补 metadata 与 `auto`。
+
+#### Step D：数值稳定化
+
+1. 对称化矩阵；
+2. 修复对角线；
+3. 检查正定性；
+4. 必要时做 nearest-PD / jitter 修正；
+5. 输出稳定化 warning。
+
+### 每一步应该怎么做（建议实施顺序）
+
+#### 第一步：先抽模块，不改行为
+
+目标：先把当前默认 Pearson 输入路径从 `fit.py` 挪到输入层模块。
+
+建议做法：
+
+1. 新建 `input_matrix.py`。
+2. 实现 `build_efa_input_matrix(data, config)`。
+3. 第一版只复刻当前默认行为：默认 Pearson 相关 + 当前 pandas 缺失值处理 + stabilize。
+4. 保证 `fit_efa()` 对外行为不变。
+
+#### 第二步：加入 `missing_strategy`
+
+目标：在不改 extraction/rotation 的前提下，先支持缺失处理切换。
+
+建议做法：
+
+1. 在 `EFAConfig` 中新增 `missing_strategy`。
+2. 支持至少：`dropna`、`pairwise`。
+3. 为 `pairwise` 输出非正定/有效样本量不足 warning。
+
+当前进展：该步骤已完成首版，后续重点转为补更细的 warning 与正定性修正策略。
+
+#### 第三步：加入 `correlation_method`
+
+目标：把相关矩阵类型从固定 Pearson 改成可配置入口。
+
+建议做法：
+
+1. 在 `EFAConfig` 中新增 `correlation_method`。
+2. 第一批先支持：`pearson`、`spearman`。
+3. 后续再接 `polychoric`。
+
+当前进展：该步骤已完成首版，并已在统一入口上接入 `polychoric`。
+
+#### 第三步补充：建立 recommendation / `variable_types` 设计
+
+目标：为后续 `polychoric`、`tetrachoric` 和 `auto` 模式打基础，但暂不引入不可控隐式行为。
+
+建议做法：
+
+1. 允许未来在 `EFAConfig` 中加入可选的 `variable_types`；
+2. 若未显式提供，则根据唯一值数量、数据类型和分布特征给出 recommendation；
+3. recommendation 先写入 warning / metadata，而不是偷偷替换用户配置；
+4. 等 recommendation 足够稳定后，再考虑 `correlation_method="auto"`。
+
+当前进展：该步骤已开始首版实现——`variable_types` 已进入 `EFAConfig`，warning recommendation 已在输入层接线，后续重点是补更稳定的识别规则与 metadata 输出。
+
+#### 第四步：实现 `polychoric`
+
+目标：在已经成型的输入层上添加 ordinal 专用相关矩阵。
+
+建议做法：
+
+1. 明确 ordinal 变量输入契约；
+2. 先做首版 `polychoric` 估计；
+3. 加强数值稳定化与失败 warning；
+4. 补针对 Likert 场景的测试。
+
+说明：`polychoric` 不建议直接塞进 extraction，而应继续作为输入矩阵层的一种 `correlation_method` 实现。
+
+当前进展：该步骤已完成第一版——当前已支持在输入层通过 `correlation_method="polychoric"` 构造 ordinal 相关矩阵，并在非 ordinal 输入上给出明确错误；后续重点转为优化估计稳定性、扩展 mixed-type 场景与补 metadata。
+
+#### 第五步：让 workflow 与 ESEM 复用
+
+目标：不要让输入层只服务 `fit_efa()`，而是让后续 workflow 也能共用。
+
+建议做法：
+
+1. 让 `run_efa_workflow()` 也走统一输入层；
+2. 后续为 ESEM 的 `efa_seeded` 候选复用这套矩阵准备逻辑。
+
+### 本阶段的完成定义（DoD）
+
+1. `fit_efa()` 仍保持公开 API 稳定。
+2. 输入矩阵构造不再直接写死在 `fit.py`。
+3. `pairwise` 能正常运行并有明确 warning。
+4. 至少补齐 `dropna` vs `pairwise` 的测试。
+5. `pearson` / `spearman` 已能通过统一入口切换。
+6. 为后续 `polychoric`、数据类型 recommendation 和 `auto` 模式留出清晰扩展位置。
 
 ---
 
@@ -759,7 +1058,7 @@ Empirical Kaiser Criterion 对传统 Kaiser 做经验修正，希望减少其过
 
 ---
 
-## 7. 输入数据处理方法
+## 7. 输入预处理与数据处理方法
 
 ## 7.1 `pairwise` 缺失处理
 
@@ -951,24 +1250,26 @@ Empirical Kaiser Criterion 对传统 Kaiser 做经验修正，希望减少其过
 
 ## 9. 总结建议
 
-## 最值得尽快补的四项
+## 已完成的第一批关键扩展
 
 1. `minres`
 2. `promax`
 3. `oblimin`
 4. `geomin`
 
-这是最小投入、最大收益的一组扩展。
+这组最小投入、最大收益的扩展已经完成，并为后续 ESEM 路线打下了基础。
 
-## 第二批关键能力
+## 当前最优先的第二阶段能力
 
-1. `ml`
+1. 输入预处理层
 2. `pairwise`
-3. `polychoric`
-4. `target rotation`
+3. `spearman`
+4. `polychoric`
 5. `vss`
 
 这批方法能直接把 `psysem` 从“当前基础 EFA 工作流”往“更专业心理测量工具”推进。
+
+> 更新：`ml` 已完成首版实现，因此当前最优先的下一步应转为“输入预处理层”，再在这层上依次接入 `pairwise`、`spearman`、`polychoric` 与 `vss`。
 
 ## 当前不建议优先做的
 
@@ -990,6 +1291,7 @@ Empirical Kaiser Criterion 对传统 Kaiser 做经验修正，希望减少其过
 - `rotation_kwargs`
 - `extraction_kwargs`
 - `retention_methods`
+- `matrix_stabilization`
 
 ### 文档侧建议
 
@@ -1006,4 +1308,4 @@ README 或参数文档中应逐步明确：
 
 如果只保留一句开发建议，就是：
 
-**先补 `minres + promax + oblimin + geomin`，再补 `ml + pairwise + polychoric + target + vss`。**
+**先补“输入预处理层”，再在这层上接入 `pairwise + spearman + polychoric + vss`，并继续把 `target` / `geomin` 更好地接入 ESEM workflow。**

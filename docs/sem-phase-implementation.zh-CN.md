@@ -11,12 +11,12 @@
 
 ## 1. Phase 总览（1-4）
 
-| Phase | 目标 | 产出 | 状态 |
-| --- | --- | --- | --- |
-| Phase 1 | 入口与契约统一 | `ModelSpec` 扩展、`fit(data, spec=...)`、严格语法校验、标准结果字段 | 已完成（基础版） |
-| Phase 2 | 测量层矩阵构建 | measurement block 组装、识别性检查、参数索引 | 进行中（第二批已完成） |
-| Phase 3 | 结构层 + ML 估计闭环 | structural 路径映射、目标函数、优化、SE 与基础 fit 指标 | 进行中（第七批已完成） |
-| Phase 4（可选） | 高级能力与性能优化 | MLR/WLSMV、多组与不变性、bootstrap、报告增强 | 可选 |
+| Phase           | 目标                 | 产出                                                                | 状态                   |
+| --------------- | -------------------- | ------------------------------------------------------------------- | ---------------------- |
+| Phase 1         | 入口与契约统一       | `ModelSpec` 扩展、`fit(data, spec=...)`、严格语法校验、标准结果字段 | 已完成（基础版）       |
+| Phase 2         | 测量层矩阵构建       | measurement block 组装、识别性检查、参数索引                        | 进行中（第二批已完成） |
+| Phase 3         | 结构层 + ML 估计闭环 | structural 路径映射、目标函数、优化、SE 与基础 fit 指标             | 进行中（第七批已完成） |
+| Phase 4（可选） | 高级能力与性能优化   | MLR/WLSMV、多组与不变性、bootstrap、报告增强                        | 可选                   |
 
 ---
 
@@ -24,17 +24,17 @@
 
 已具备：
 
-1. `parse_model(syntax)` 基础校验（非空字符串）。  
-2. `SEMModel.fit(data)` 占位接口，可返回 `SEMResult`。  
-3. `compute_basic_fit_indices()` 已支持基础计算路径（无输入时仍保留 `nan` 占位兼容）。  
-4. `to_markdown(result)` 基础报告输出。  
+1. `parse_model(syntax)` 基础校验（非空字符串）。
+2. `SEMModel.fit(data)` 占位接口，可返回 `SEMResult`。
+3. `compute_basic_fit_indices()` 已支持基础计算路径（无输入时仍保留 `nan` 占位兼容）。
+4. `to_markdown(result)` 基础报告输出。
 
 当前缺口：
 
-1. 无正式语法树（AST）和参数约束表达。  
-2. measurement/structural 矩阵层已起步，稳健估计闭环尚未完善。  
-3. ML、推断与基础拟合指标已起步原型，但 MLR/WLSMV 与稳健统计尚未完成。  
-4. 无端到端 SEM 数值回归测试。  
+1. 无正式语法树（AST）和参数约束表达。
+2. measurement/structural 矩阵层已起步，稳健估计闭环尚未完善。
+3. ML、推断与基础拟合指标已起步原型，但 MLR/WLSMV 与稳健统计尚未完成。
+4. 无端到端 SEM 数值回归测试。
 
 ---
 
@@ -42,36 +42,36 @@
 
 Phase 1 已落地（第二批）：
 
-1. `parse_model` 支持结构化关系对象（含 RHS term 细分）。  
-2. 支持 term modifier：参数标签（如 `b1*x1`）与固定系数（如 `0.5*x1`）。  
-3. 支持约束表达占位：`==`、`>=`、`<=`。  
-4. 语法错误信息支持定位到 `statement` 与 `term`。  
-5. `SEMModel.fit` 已支持 `fit(data, spec=...)` 并统一到 `ModelSpec`。  
-6. `SEMResult` 扩展字段已接入 `summary` 与 `to_markdown`。  
-7. `SEMModel.fit` 已生成参数表草稿（free/fixed/label）并写入 `parameter_table`。  
+1. `parse_model` 支持结构化关系对象（含 RHS term 细分）。
+2. 支持 term modifier：参数标签（如 `b1*x1`）与固定系数（如 `0.5*x1`）。
+3. 支持约束表达占位：`==`、`>=`、`<=`。
+4. 语法错误信息支持定位到 `statement` 与 `term`。
+5. `SEMModel.fit` 已支持 `fit(data, spec=...)` 并统一到 `ModelSpec`。
+6. `SEMResult` 扩展字段已接入 `summary` 与 `to_markdown`。
+7. `SEMModel.fit` 已生成参数表草稿（free/fixed/label）并写入 `parameter_table`。
 
 Phase 2 已落地（第二批）：
 
-1. 新增 `measurement` 模块，支持 `Lambda`/`Theta` 矩阵草图构建。  
-2. 增加基础识别性检查（最少指标数、marker 缺失告警）。  
-3. 支持多 block 组装映射（`block_latent_pairs`）。  
-4. measurement 层加载参数与全局 `parameter_table` 索引已对齐。  
+1. 新增 `measurement` 模块，支持 `Lambda`/`Theta` 矩阵草图构建。
+2. 增加基础识别性检查（最少指标数、marker 缺失告警）。
+3. 支持多 block 组装映射（`block_latent_pairs`）。
+4. measurement 层加载参数与全局 `parameter_table` 索引已对齐。
 
 Phase 3 已落地（第七批）：
 
-1. 新增 `structural` 模块，支持 structural path table 构建。  
-2. 产出 `Beta/Gamma` 矩阵草图（用于后续估计层输入）。  
-3. 增加循环依赖基础检查（latent cycle）。  
-4. `SEMModel.fit` 已接入 structural 设计并回传到 `SEMResult`。  
-5. 新增全局 `parameter_index_map`（`parameter_index -> vector_position`）。  
-6. measurement/structural 均回传统一参数索引矩阵（供估计层直接取值）。  
-7. structural 增加 `Psi`（内生潜变量扰动方差）矩阵与索引映射。  
-8. 新建 `estimation` 模块，落地 `gaussian_ml_discrepancy`、`build_implied_covariance` 与 `optimize_ml_parameters` 原型。  
-9. `SEMModel.fit` 在样本量满足阈值时可自动触发 ML 原型优化并回填参数值。  
-10. measurement 增加 `Theta` 参数索引矩阵，观测残差方差可映射到全局参数向量。  
-11. 新建 `inference` 模块，落地数值 Hessian 推断原型（SE/z/p/CI）并接入 `SEMModel.fit`。  
-12. `fit_indices` 升级为基础可计算版本（AIC/BIC/SRMR/CFI/TLI/RMSEA）并接入 `SEMModel.fit`。  
-13. 引入 `SEMFitConfig` / `ParameterBoundsConfig`，支持拟合配置、重启策略与失败分类诊断。  
+1. 新增 `structural` 模块，支持 structural path table 构建。
+2. 产出 `Beta/Gamma` 矩阵草图（用于后续估计层输入）。
+3. 增加循环依赖基础检查（latent cycle）。
+4. `SEMModel.fit` 已接入 structural 设计并回传到 `SEMResult`。
+5. 新增全局 `parameter_index_map`（`parameter_index -> vector_position`）。
+6. measurement/structural 均回传统一参数索引矩阵（供估计层直接取值）。
+7. structural 增加 `Psi`（内生潜变量扰动方差）矩阵与索引映射。
+8. 新建 `estimation` 模块，落地 `gaussian_ml_discrepancy`、`build_implied_covariance` 与 `optimize_ml_parameters` 原型。
+9. `SEMModel.fit` 在样本量满足阈值时可自动触发 ML 原型优化并回填参数值。
+10. measurement 增加 `Theta` 参数索引矩阵，观测残差方差可映射到全局参数向量。
+11. 新建 `inference` 模块，落地数值 Hessian 推断原型（SE/z/p/CI）并接入 `SEMModel.fit`。
+12. `fit_indices` 升级为基础可计算版本（AIC/BIC/SRMR/CFI/TLI/RMSEA）并接入 `SEMModel.fit`。
+13. 引入 `SEMFitConfig` / `ParameterBoundsConfig`，支持拟合配置、重启策略与失败分类诊断。
 
 ---
 
@@ -100,14 +100,14 @@ src/psysem/
 
 ### 4.1 目标
 
-1. 统一 `syntax` 与 `spec` 两条入口的内部表示。  
-2. 把当前 token 级解析升级为结构化解析结果。  
-3. 升级 `SEMResult` 契约，预留后续估计与报告字段。  
+1. 统一 `syntax` 与 `spec` 两条入口的内部表示。
+2. 把当前 token 级解析升级为结构化解析结果。
+3. 升级 `SEMResult` 契约，预留后续估计与报告字段。
 
 ### 4.2 非目标
 
-1. 不实现完整估计器。  
-2. 不实现复杂多组与不变性。  
+1. 不实现完整估计器。
+2. 不实现复杂多组与不变性。
 
 ### 4.3 详细步骤
 
@@ -115,9 +115,9 @@ src/psysem/
 
 实现内容：
 
-1. 将 `ModelSpec` 扩展为可承载 measurement/structural/constraint 的结构。  
-2. 新增参数项元数据（参数名、类型、自由/固定、起始值、边界）。  
-3. 定义统一错误类型（语法错误、识别性错误、数据错误）。  
+1. 将 `ModelSpec` 扩展为可承载 measurement/structural/constraint 的结构。
+2. 新增参数项元数据（参数名、类型、自由/固定、起始值、边界）。
+3. 定义统一错误类型（语法错误、识别性错误、数据错误）。
 
 落地文件（建议）：
 
@@ -127,16 +127,16 @@ src/psysem/
 
 完成标准：
 
-1. `ModelSpec` 不再仅包含 `syntax: str`。  
-2. 错误信息可定位到表达式片段。  
+1. `ModelSpec` 不再仅包含 `syntax: str`。
+2. 错误信息可定位到表达式片段。
 
 #### Step 2: 解析器升级
 
 实现内容：
 
-1. 支持测量表达式与结构表达式的显式区分。  
-2. 支持基本参数约束（固定值、标签、等值约束的占位表达）。  
-3. 对重复路径、未知变量、空右侧表达式报错。  
+1. 支持测量表达式与结构表达式的显式区分。
+2. 支持基本参数约束（固定值、标签、等值约束的占位表达）。
+3. 对重复路径、未知变量、空右侧表达式报错。
 
 落地文件（建议）：
 
@@ -145,16 +145,16 @@ src/psysem/
 
 完成标准：
 
-1. 关键非法语法均有单元测试断言。  
-2. `parse_model` 返回结构化对象。  
+1. 关键非法语法均有单元测试断言。
+2. `parse_model` 返回结构化对象。
 
 #### Step 3: 统一 `fit` 入口
 
 实现内容：
 
-1. 让 `SEMModel.fit(data, spec=...)` 支持显式 `ESEMSpec`。  
-2. 统一 `SEMModel(...syntax...).fit(...)` 与 `sem(...)` 的内部编排。  
-3. 输出统一 warnings 容器，便于后续质量诊断。  
+1. 让 `SEMModel.fit(data, spec=...)` 支持显式 `ESEMSpec`。
+2. 统一 `SEMModel(...syntax...).fit(...)` 与 `sem(...)` 的内部编排。
+3. 输出统一 warnings 容器，便于后续质量诊断。
 
 落地文件（建议）：
 
@@ -164,16 +164,16 @@ src/psysem/
 
 完成标准：
 
-1. 两条入口得到同构的内部 `ModelSpec`。  
-2. 兼容现有 smoke API。  
+1. 两条入口得到同构的内部 `ModelSpec`。
+2. 兼容现有 smoke API。
 
 #### Step 4: 升级 `SEMResult` 契约
 
 实现内容：
 
-1. 新增 `parameter_table`、`warnings`、`optimization_info` 字段。  
-2. 保留旧字段兼容，避免破坏外部调用。  
-3. `summary()` 增加结构化输出（估计器、收敛、主要指标）。  
+1. 新增 `parameter_table`、`warnings`、`optimization_info` 字段。
+2. 保留旧字段兼容，避免破坏外部调用。
+3. `summary()` 增加结构化输出（估计器、收敛、主要指标）。
 
 落地文件（建议）：
 
@@ -183,14 +183,14 @@ src/psysem/
 
 完成标准：
 
-1. 结果对象可直接承载 Phase 2/3 的产出。  
-2. 向后兼容测试通过。  
+1. 结果对象可直接承载 Phase 2/3 的产出。
+2. 向后兼容测试通过。
 
 ### 4.4 Phase 1 验收标准
 
-1. 可稳定解析并标准化语法/`spec` 输入。  
-2. `fit` 入口统一且错误信息清晰。  
-3. `SEMResult` 新契约完成并保持兼容。  
+1. 可稳定解析并标准化语法/`spec` 输入。
+2. `fit` 入口统一且错误信息清晰。
+3. `SEMResult` 新契约完成并保持兼容。
 
 ---
 
@@ -198,9 +198,9 @@ src/psysem/
 
 ### 5.1 目标
 
-1. 将测量模型映射到 SEM 矩阵表示。  
-2. 支持单 block 到多 block 组装。  
-3. 在估计前完成识别性与参数计数检查。  
+1. 将测量模型映射到 SEM 矩阵表示。
+2. 支持单 block 到多 block 组装。
+3. 在估计前完成识别性与参数计数检查。
 
 ### 5.2 详细步骤
 
@@ -208,9 +208,9 @@ src/psysem/
 
 实现内容：
 
-1. 构建 `Lambda`, `Theta` 等测量层矩阵定义。  
-2. 定义潜变量与观测变量索引映射。  
-3. 显式区分固定参数与自由参数。  
+1. 构建 `Lambda`, `Theta` 等测量层矩阵定义。
+2. 定义潜变量与观测变量索引映射。
+3. 显式区分固定参数与自由参数。
 
 落地文件（建议）：
 
@@ -219,16 +219,16 @@ src/psysem/
 
 完成标准：
 
-1. 可从 `ModelSpec` 生成测量层矩阵草图。  
-2. 参数索引稳定可复现。  
+1. 可从 `ModelSpec` 生成测量层矩阵草图。
+2. 参数索引稳定可复现。
 
 #### Step 6: 多 block 组装与旋转策略入口
 
 实现内容：
 
-1. 支持按 block 组合 measurement 部分。  
-2. 允许 block 级配置覆盖全局配置。  
-3. 与 `data` 模块中 block 合法性校验结果联动。  
+1. 支持按 block 组合 measurement 部分。
+2. 允许 block 级配置覆盖全局配置。
+3. 与 `data` 模块中 block 合法性校验结果联动。
 
 落地文件（建议）：
 
@@ -237,16 +237,16 @@ src/psysem/
 
 完成标准：
 
-1. 多 block 输入可产生统一矩阵定义。  
-2. block 覆盖规则有测试断言。  
+1. 多 block 输入可产生统一矩阵定义。
+2. block 覆盖规则有测试断言。
 
 #### Step 7: 识别性检查
 
 实现内容：
 
-1. 因子尺度设定检查（marker/loading/variance 规则）。  
-2. 参数自由度检查与过识别/欠识别预警。  
-3. 不可识别模型在估计前阻断。  
+1. 因子尺度设定检查（marker/loading/variance 规则）。
+2. 参数自由度检查与过识别/欠识别预警。
+3. 不可识别模型在估计前阻断。
 
 落地文件（建议）：
 
@@ -255,14 +255,14 @@ src/psysem/
 
 完成标准：
 
-1. 不可识别模型有明确错误类型与信息。  
-2. 识别性检查可独立调用。  
+1. 不可识别模型有明确错误类型与信息。
+2. 识别性检查可独立调用。
 
 ### 5.3 Phase 2 验收标准
 
-1. 测量层可稳定转换为矩阵定义。  
-2. 参数索引与识别性检查可复用到估计层。  
-3. 多 block 场景可运行。  
+1. 测量层可稳定转换为矩阵定义。
+2. 参数索引与识别性检查可复用到估计层。
+3. 多 block 场景可运行。
 
 ---
 
@@ -270,9 +270,9 @@ src/psysem/
 
 ### 6.1 目标
 
-1. 完成 structural 路径矩阵映射。  
-2. 跑通单组连续变量 `ML` 估计主流程。  
-3. 给出可解释参数结果与基础拟合指标。  
+1. 完成 structural 路径矩阵映射。
+2. 跑通单组连续变量 `ML` 估计主流程。
+3. 给出可解释参数结果与基础拟合指标。
 
 ### 6.2 详细步骤
 
@@ -280,9 +280,9 @@ src/psysem/
 
 实现内容：
 
-1. 构建 `Beta`, `Gamma`, `Psi`（结构层）映射。  
-2. 检查循环依赖、重复路径、未知变量。  
-3. 合并 measurement + structural 参数索引。  
+1. 构建 `Beta`, `Gamma`, `Psi`（结构层）映射。
+2. 检查循环依赖、重复路径、未知变量。
+3. 合并 measurement + structural 参数索引。
 
 落地文件（建议）：
 
@@ -291,16 +291,16 @@ src/psysem/
 
 完成标准：
 
-1. 结构层矩阵输出稳定。  
-2. 非法路径场景有明确断言。  
+1. 结构层矩阵输出稳定。
+2. 非法路径场景有明确断言。
 
 #### Step 9: ML 目标函数与优化编排
 
 实现内容：
 
-1. 建立 implied covariance 与损失函数。  
-2. 封装优化器（初值、边界、收敛判据、失败信息）。  
-3. 将优化状态写入 `SEMResult.optimization_info`。  
+1. 建立 implied covariance 与损失函数。
+2. 封装优化器（初值、边界、收敛判据、失败信息）。
+3. 将优化状态写入 `SEMResult.optimization_info`。
 
 落地文件（建议）：
 
@@ -309,16 +309,16 @@ src/psysem/
 
 完成标准：
 
-1. 在基准数据上稳定收敛。  
-2. 失败场景可复现并给出可读原因。  
+1. 在基准数据上稳定收敛。
+2. 失败场景可复现并给出可读原因。
 
 #### Step 10: 推断与拟合指标
 
 实现内容：
 
-1. 计算信息矩阵与参数标准误（先支持常规近似）。  
-2. 输出 `z/p/CI` 到参数表。  
-3. 将 `cfi/tli/rmsea/srmr/aic/bic` 从占位改为真实计算。  
+1. 计算信息矩阵与参数标准误（先支持常规近似）。
+2. 输出 `z/p/CI` 到参数表。
+3. 将 `cfi/tli/rmsea/srmr/aic/bic` 从占位改为真实计算。
 
 落地文件（建议）：
 
@@ -329,14 +329,14 @@ src/psysem/
 
 完成标准：
 
-1. 参数表含估计值与推断字段。  
-2. 基础 fit 指标在正常模型下非 `nan`。  
+1. 参数表含估计值与推断字段。
+2. 基础 fit 指标在正常模型下非 `nan`。
 
 ### 6.3 Phase 3 验收标准
 
-1. 单组连续变量 ML 流程可端到端运行。  
-2. 结果包含参数估计、SE、p 值、基础 fit 指标。  
-3. 文档与示例可复现。  
+1. 单组连续变量 ML 流程可端到端运行。
+2. 结果包含参数估计、SE、p 值、基础 fit 指标。
+3. 文档与示例可复现。
 
 ---
 
@@ -344,22 +344,22 @@ src/psysem/
 
 ### 7.1 目标
 
-1. 扩展估计器与鲁棒推断。  
-2. 支持多组与不变性评估。  
-3. 提升大样本/高维场景性能。  
+1. 扩展估计器与鲁棒推断。
+2. 支持多组与不变性评估。
+3. 提升大样本/高维场景性能。
 
 ### 7.2 可选子项
 
-1. 估计器扩展：`MLR`、`WLSMV`。  
-2. 多组与约束：configural/metric/scalar invariance。  
-3. 置信区间增强：bootstrap。  
-4. 性能优化：并行梯度/缓存矩阵分解。  
-5. 报告增强：可导出 Markdown/CSV/HTML。  
+1. 估计器扩展：`MLR`、`WLSMV`。
+2. 多组与约束：configural/metric/scalar invariance。
+3. 置信区间增强：bootstrap。
+4. 性能优化：并行梯度/缓存矩阵分解。
+5. 报告增强：可导出 Markdown/CSV/HTML。
 
 ### 7.3 Phase 4 验收标准
 
-1. 高级功能可开关且不破坏 Phase 3 主流程。  
-2. 回归测试覆盖核心 estimator 路径。  
+1. 高级功能可开关且不破坏 Phase 3 主流程。
+2. 回归测试覆盖核心 estimator 路径。
 
 ---
 
@@ -381,9 +381,9 @@ print(result.summary())
 
 建议后续新增配置对象：
 
-1. `SEMFitConfig`：估计器与收敛参数。  
-2. `SEMInferenceConfig`：SE 与区间配置。  
-3. `SEMReportConfig`：报告输出粒度。  
+1. `SEMFitConfig`：估计器与收敛参数。
+2. `SEMInferenceConfig`：SE 与区间配置。
+3. `SEMReportConfig`：报告输出粒度。
 
 ---
 
@@ -416,19 +416,140 @@ tests/
 ## 10. 风险与缓解
 
 1. 风险：识别性问题导致估计不稳定。  
-缓解：将识别性检查前置为硬门禁。  
+   缓解：将识别性检查前置为硬门禁。
 
 2. 风险：语法与 `spec` 双入口造成行为不一致。  
-缓解：统一转换到同一 `ModelSpec` 中间层。  
+   缓解：统一转换到同一 `ModelSpec` 中间层。
 
 3. 风险：统计指标与优化器实现复杂度高。  
-缓解：先做单估计器（ML）闭环，再扩展。  
+   缓解：先做单估计器（ML）闭环，再扩展。
 
 ---
 
 ## 11. 执行优先级建议
 
-1. 先做 Phase 1（入口与契约），降低后续返工成本。  
-2. 再做 Phase 2（矩阵与识别性），保证估计层输入稳定。  
-3. 然后做 Phase 3（ML 闭环），拿到首个可用 SEM 版本。  
-4. 最后按需求选择 Phase 4（可选增强）。  
+1. 先做 Phase 1（入口与契约），降低后续返工成本。
+2. 再做 Phase 2（矩阵与识别性），保证估计层输入稳定。
+3. 然后做 Phase 3（ML 闭环），拿到首个可用 SEM 版本。
+4. 最后按需求选择 Phase 4（可选增强）。
+
+---
+
+## 12. 下一阶段执行路线（已整合原“SEM 后续实施路线图”）
+
+本节聚焦“在现有实现基础上，接下来应该优先做什么”。与前文 Phase 1-4 的长期规划不同，这里强调的是**短周期执行顺序**与**当前工程缺口**。
+
+### 12.1 当前工程状态（整合视角）
+
+当前已具备：
+
+1. `syntax` 与 `spec` 已统一到 `ModelSpec`。
+2. measurement（`Lambda/Theta`）与 structural（`Beta/Gamma/Psi`）矩阵草图已可构建。
+3. 全局 `parameter_index -> vector_position` 已统一。
+4. ML 原型（`build_implied_covariance` + `optimize_ml_parameters`）已接入 `SEMModel.fit`。
+5. 基础推断、基础拟合指标与优化鲁棒性原型已落地。
+
+当前关键缺口：
+
+1. 推断层仍偏原型化，数值稳定性与异常场景覆盖仍需增强。
+2. 拟合指标虽然可算，但稳健版本与边界解释仍需补齐。
+3. 优化器容错能力仍需继续工程化。
+4. 高级路径尚未覆盖：`MLR/WLSMV`、多组不变性、完整端到端数值回归。
+
+### 12.2 目标状态（下一阶段）
+
+完成后应达到：
+
+1. `SEMModel.fit(...)` 可输出可解释参数表（估计值 + SE + 显著性）。
+2. 正常模型下主要拟合指标不再是 `nan`。
+3. 优化失败时可返回结构化诊断，而不是仅依赖笼统失败状态。
+4. 有稳定的数值回归测试，重构不易破坏结果。
+
+### 12.3 短周期优先级
+
+#### P0：推断层最小可用
+
+目标：把“能估计参数”升级为“能解释参数”。
+
+实现重点：
+
+1. 稳定 `inference` 模块，继续完善 `SE/z/p/CI`。
+2. 在 `summary()` / `to_markdown()` 中更稳定地展示推断摘要。
+3. 对不可计算场景输出明确原因，而不是静默 `nan`。
+
+验收标准：
+
+1. 至少 1 个简单模型可稳定产出非空推断字段。
+2. 新增推断字段不破坏旧结果结构。
+
+#### P0：拟合指标真实化与边界解释
+
+目标：把已有基础拟合指标从“可计算”推进到“可解释”。
+
+实现重点：
+
+1. 稳定 `AIC/BIC/SRMR/CFI/TLI/RMSEA` 的边界行为。
+2. 在欠识别、近奇异、失败优化场景补充 warning。
+3. 补更多正常路径与异常路径测试。
+
+验收标准：
+
+1. 正常模型下主要指标非 `nan`。
+2. 边界模型能返回可解释 warning。
+
+#### P1：优化鲁棒性
+
+目标：让优化器从“原型可跑”升级为“工程可用”。
+
+实现重点：
+
+1. 完善 `SEMFitConfig` 的重启、失败分类和默认策略。
+2. 增强初值、边界、矩阵奇异等失败场景诊断。
+3. 让 `optimization_info` 更适合直接写入结果报告。
+
+验收标准：
+
+1. 常见失败场景可复现且有明确分类。
+2. 重启策略有测试覆盖，且可提升成功率。
+
+#### P0：测试与回归门禁
+
+目标：建立数值稳定的 SEM 回归防线。
+
+实现重点：
+
+1. 固定随机种子与合成数据。
+2. 对关键指标设置容差断言。
+3. 覆盖 measurement-only、measurement+structural、`spec` 入口三类主路径。
+
+建议重点测试文件：
+
+1. `tests/test_sem_inference.py`
+2. `tests/test_sem_fit_indices.py`
+3. `tests/test_sem_estimation_config.py`
+4. `tests/test_sem_estimation_ml.py`
+
+### 12.4 建议执行顺序
+
+建议按以下顺序推进：
+
+1. 先补推断层稳定性。
+2. 再补拟合指标边界行为。
+3. 同步补齐数值回归测试。
+4. 再继续增强优化鲁棒性。
+5. 最后扩展 `MLR/WLSMV`、多组与不变性。
+
+### 12.5 每次迭代的完成定义（DoD）
+
+每个小阶段完成前，至少满足：
+
+1. 代码实现与文档同步更新。
+2. `python -m ruff check .` 通过。
+3. `python -m mypy src` 通过。
+4. `python -m pytest -q` 全绿。
+5. 新增能力至少包含 1 个正常路径测试与 1 个边界路径测试。
+
+### 12.6 关联文档
+
+1. [ESEM 模块化判断工作流实施文档（ZH）](esem-modular-workflow.zh-CN.md)
+2. [ESEM 最小可跑路径（MVP，ZH）](esem-mvp-run.zh-CN.md)

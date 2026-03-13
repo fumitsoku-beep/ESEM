@@ -135,14 +135,14 @@ src/psysem/
 
 ### 5.1 方法映射表
 
-| 方法思路 | 在工作流中的位置 | 第一版是否落地 |
-| --- | --- | --- |
-| 当前 block 全展开 | generator | 是 |
-| 两阶段 EFA -> SEM | generator/adapters | 是 |
-| target rotation / target matrix | generator | 是（先做轻量版） |
-| bifactor / hierarchical | generator | 否，后续扩展 |
-| 稀疏/正则化 | judge + estimator | 否 |
-| 贝叶斯 ESEM | estimator | 否 |
+| 方法思路                        | 在工作流中的位置   | 第一版是否落地   |
+| ------------------------------- | ------------------ | ---------------- |
+| 当前 block 全展开               | generator          | 是               |
+| 两阶段 EFA -> SEM               | generator/adapters | 是               |
+| target rotation / target matrix | generator          | 是（先做轻量版） |
+| bifactor / hierarchical         | generator          | 否，后续扩展     |
+| 稀疏/正则化                     | judge + estimator  | 否               |
+| 贝叶斯 ESEM                     | estimator          | 否               |
 
 ### 5.2 第一版只做哪三个
 
@@ -162,15 +162,15 @@ src/psysem/
 
 ## 6. Phase 设计总览
 
-| Phase | 目标 | 产出 | 优先级 |
-| --- | --- | --- | --- |
-| Phase 0 | 契约与目录准备 | `contracts.py` + API 草案 | P0 |
-| Phase 1 | 候选生成器 | 3 个默认 generator | P0 |
-| Phase 2 | judge 体系 | 4-6 个默认 judge | P0 |
-| Phase 3 | selector 与比较表 | 多候选自动选择 | P0 |
-| Phase 4 | workflow 编排 | `run_esem_workflow(...)` | P0 |
-| Phase 5 | 文档/示例/测试 | 端到端回归防线 | P0 |
-| Phase 6 | 高级扩展 | bifactor / 更复杂规则 | P2 |
+| Phase   | 目标              | 产出                      | 优先级 |
+| ------- | ----------------- | ------------------------- | ------ |
+| Phase 0 | 契约与目录准备    | `contracts.py` + API 草案 | P0     |
+| Phase 1 | 候选生成器        | 3 个默认 generator        | P0     |
+| Phase 2 | judge 体系        | 4-6 个默认 judge          | P0     |
+| Phase 3 | selector 与比较表 | 多候选自动选择            | P0     |
+| Phase 4 | workflow 编排     | `run_esem_workflow(...)`  | P0     |
+| Phase 5 | 文档/示例/测试    | 端到端回归防线            | P0     |
+| Phase 6 | 高级扩展          | bifactor / 更复杂规则     | P2     |
 
 ---
 
@@ -207,7 +207,7 @@ src/psysem/
 ### 落地文件
 
 1. 本文档
-2. [docs/sem-next-steps.zh-CN.md](sem-next-steps.zh-CN.md)（后续可补简版链接）
+2. [docs/sem-phase-implementation.zh-CN.md](sem-phase-implementation.zh-CN.md)（其中已整合后续执行路线）
 
 ### 完成标准
 
@@ -920,5 +920,5 @@ print(workflow.best_candidate.sem_result.summary())
 
 1. [EFA Phase 实施文档（ZH）](efa-phase1-implementation.zh-CN.md)
 2. [SEM Phase 实施文档（ZH）](sem-phase-implementation.zh-CN.md)
-3. [SEM 后续实施路线图（ZH）](sem-next-steps.zh-CN.md)
+3. [SEM Phase 实施文档（ZH）](sem-phase-implementation.zh-CN.md)
 4. [ESEM Baseline Research（ZH）](esem-baseline-landscape.zh-CN.md)

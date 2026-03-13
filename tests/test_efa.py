@@ -31,6 +31,19 @@ def _synthetic_efa_data(n: int = 400, seed: int = 42) -> pd.DataFrame:
     return pd.DataFrame(observed, columns=columns)
 
 
+def _synthetic_ordinal_efa_data(n: int = 1200, seed: int = 21) -> pd.DataFrame:
+    rng = np.random.default_rng(seed)
+    factor = rng.normal(size=(n, 1))
+    loadings = np.array([[0.85], [0.80], [0.75], [0.70]])
+    noise = rng.normal(scale=0.55, size=(n, 4))
+    latent = factor @ loadings.T + noise
+    thresholds = np.array([-1.0, -0.2, 0.25, 0.9])
+    observed = np.column_stack([
+        np.digitize(latent[:, column], thresholds) + 1 for column in range(latent.shape[1])
+    ])
+    return pd.DataFrame(observed, columns=[f"i{i}" for i in range(1, 5)])
+
+
 def test_fit_efa_paf_varimax_shapes() -> None:
     data = _synthetic_efa_data()
     config = EFAConfig(
@@ -79,6 +92,78 @@ def test_fit_efa_pca_none_rotation() -> None:
     assert result.converged is True
 
 
+def test_fit_efa_accepts_dropna_missing_strategy() -> None:
+    data = _synthetic_efa_data()
+    data.loc[0, "i1"] = np.nan
+    data.loc[1, "i2"] = np.nan
+
+    result = fit_efa(
+        data,
+        EFAConfig(
+            items=("i1", "i2", "i3", "i4", "i5", "i6"),
+            n_factors=2,
+            extraction="paf",
+            rotation="varimax",
+            missing_strategy="dropna",
+        ),
+    )
+
+    assert result.loadings.shape == (6, 2)
+    assert any("dropna strategy" in warning for warning in result.warnings)
+
+
+def test_fit_efa_accepts_spearman_correlation_method() -> None:
+    data = _synthetic_efa_data()
+    result = fit_efa(
+        data,
+        EFAConfig(
+            items=("i1", "i2", "i3", "i4", "i5", "i6"),
+            n_factors=2,
+            extraction="paf",
+            rotation="varimax",
+            correlation_method="spearman",
+        ),
+    )
+
+    assert result.loadings.shape == (6, 2)
+    assert any("Spearman rank correlation" in warning for warning in result.warnings)
+
+
+def test_fit_efa_accepts_polychoric_correlation_method() -> None:
+    data = _synthetic_ordinal_efa_data()
+    result = fit_efa(
+        data,
+        EFAConfig(
+            items=("i1", "i2", "i3", "i4"),
+            n_factors=1,
+            extraction="paf",
+            rotation="none",
+            correlation_method="polychoric",
+        ),
+    )
+
+    assert result.loadings.shape == (4, 1)
+    assert result.correlation_matrix.shape == (4, 4)
+    assert any("polychoric correlation" in warning for warning in result.warnings)
+
+
+def test_fit_efa_warns_for_declared_ordinal_items_under_pearson() -> None:
+    data = _synthetic_efa_data()
+    result = fit_efa(
+        data,
+        EFAConfig(
+            items=("i1", "i2", "i3", "i4", "i5", "i6"),
+            n_factors=2,
+            extraction="paf",
+            rotation="varimax",
+            correlation_method="pearson",
+            variable_types={"i1": "ordinal", "i2": "ordinal"},
+        ),
+    )
+
+    assert any("Declared ordinal-like items detected" in warning for warning in result.warnings)
+
+
 def test_fit_efa_minres_varimax_shapes() -> None:
     data = _synthetic_efa_data()
     result = fit_efa(
@@ -98,6 +183,45 @@ def test_fit_efa_minres_varimax_shapes() -> None:
     assert (result.uniquenesses >= 0.005).all()
     assert (result.communalities >= 0.0).all()
     assert (result.communalities <= 1.0).all()
+
+
+def test_fit_efa_ml_varimax_shapes() -> None:
+    data = _synthetic_efa_data()
+    result = fit_efa(
+        data,
+        EFAConfig(
+            items=("i1", "i2", "i3", "i4", "i5", "i6"),
+            n_factors=2,
+            extraction="ml",
+            rotation="varimax",
+        ),
+    )
+
+    assert result.extraction == "ml"
+    assert result.loadings.shape == (6, 2)
+    assert result.converged is True
+    assert result.n_iter >= 0
+    assert (result.uniquenesses >= 0.005).all()
+    assert (result.communalities >= 0.0).all()
+    assert (result.communalities <= 1.0).all()
+
+
+def test_fit_efa_ml_reports_non_convergence_warning() -> None:
+    data = _synthetic_efa_data()
+    result = fit_efa(
+        data,
+        EFAConfig(
+            items=("i1", "i2", "i3", "i4", "i5", "i6"),
+            n_factors=2,
+            extraction="ml",
+            rotation="varimax",
+            max_iter=1,
+        ),
+    )
+
+    joined = " | ".join(result.warnings)
+    assert result.converged is False
+    assert "Extraction did not converge" in joined
 
 
 def test_fit_efa_paf_promax_returns_factor_correlation() -> None:
@@ -443,6 +567,7 @@ def test_fit_efa_rejects_missing_items() -> None:
 
 def test_list_methods_contains_defaults() -> None:
     assert "paf" in list_extraction_methods()
+    assert "ml" in list_extraction_methods()
     assert "minres" in list_extraction_methods()
     assert "pca" in list_extraction_methods()
     assert "geomin" in list_rotation_methods()
@@ -536,6 +661,30 @@ def test_fit_efa_rejects_invalid_optimization_settings() -> None:
         fit_efa(data, EFAConfig(items=("i1", "i2", "i3"), n_factors=1, rotation_restarts=-1))
     with pytest.raises(ValueError, match="`min_uniqueness` must be between 0 and 1"):
         fit_efa(data, EFAConfig(items=("i1", "i2", "i3"), n_factors=1, min_uniqueness=1.0))
+    with pytest.raises(ValueError, match="`missing_strategy` must be one of"):
+        fit_efa(data, EFAConfig(items=("i1", "i2", "i3"), n_factors=1, missing_strategy="median"))
+    with pytest.raises(ValueError, match="`correlation_method` must be one of"):
+        fit_efa(data, EFAConfig(items=("i1", "i2", "i3"), n_factors=1, correlation_method="kendall"))
+    with pytest.raises(ValueError, match="requires all analysis items to resolve to `ordinal`"):
+        fit_efa(
+            data,
+            EFAConfig(
+                items=("i1", "i2", "i3"),
+                n_factors=1,
+                correlation_method="polychoric",
+                variable_types={"i1": "continuous", "i2": "ordinal", "i3": "ordinal"},
+            ),
+        )
+    with pytest.raises(ValueError, match="`variable_types` entries must be `continuous` or `ordinal`"):
+        fit_efa(
+            data,
+            EFAConfig(items=("i1", "i2", "i3"), n_factors=1, variable_types={"i1": "binary"}),
+        )
+    with pytest.raises(ValueError, match="`variable_types` contains items not present in `items`"):
+        fit_efa(
+            data,
+            EFAConfig(items=("i1", "i2", "i3"), n_factors=1, variable_types={"i4": "ordinal"}),
+        )
 
 
 def test_fit_efa_accepts_case_insensitive_method_names() -> None:
