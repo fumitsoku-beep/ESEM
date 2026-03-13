@@ -72,5 +72,19 @@ spec = {
 ## 当前实现状态
 
 - 已实现：`spec` 数据结构与基础校验
+- 已实现：EFA 提取法 `paf`、`pca`、`minres`
+- 已实现：EFA 旋转法 `none`、`varimax`、`promax`、`oblimin`、`geomin`、`target`
+- 已实现：`target rotation` 的目标矩阵、目标权重、多起点重启与随机种子控制
 - 进行中：`SEMModel.fit(data, spec=...)` 主入口接入
 - 后续：更严格 structural 语法解析 + ESEM 估计器实现
+
+## 当前 EFA `target rotation` 说明
+
+当使用 `rotation="target"` 时，当前版本支持：
+
+- `rotation_target`：目标矩阵，有限值表示目标值，`NaN` 表示自由位置；
+- `rotation_target_weights`：目标权重矩阵，可区分强约束、弱引导与自由位置；
+- `rotation_restarts`：多起点重启次数；
+- `random_state`：用于保证重启可复现。
+
+这使得当前 EFA 已可以表达较基础的 target-pattern 旋转需求，并为后续 ESEM block workflow 做准备。

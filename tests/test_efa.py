@@ -79,12 +79,353 @@ def test_fit_efa_pca_none_rotation() -> None:
     assert result.converged is True
 
 
+def test_fit_efa_minres_varimax_shapes() -> None:
+    data = _synthetic_efa_data()
+    result = fit_efa(
+        data,
+        EFAConfig(
+            items=("i1", "i2", "i3", "i4", "i5", "i6"),
+            n_factors=2,
+            extraction="minres",
+            rotation="varimax",
+        ),
+    )
+
+    assert result.extraction == "minres"
+    assert result.loadings.shape == (6, 2)
+    assert result.converged is True
+    assert result.n_iter >= 0
+    assert (result.uniquenesses >= 0.005).all()
+    assert (result.communalities >= 0.0).all()
+    assert (result.communalities <= 1.0).all()
+
+
+def test_fit_efa_paf_promax_returns_factor_correlation() -> None:
+    rng = np.random.default_rng(123)
+    latent_cov = np.array([[1.0, 0.45], [0.45, 1.0]])
+    factors = rng.multivariate_normal(mean=np.zeros(2), cov=latent_cov, size=500)
+    loadings = np.array(
+        [
+            [0.82, 0.10],
+            [0.77, 0.14],
+            [0.72, 0.12],
+            [0.09, 0.81],
+            [0.15, 0.76],
+            [0.11, 0.73],
+        ]
+    )
+    noise = rng.normal(scale=0.40, size=(500, 6))
+    observed = factors @ loadings.T + noise
+    data = pd.DataFrame(observed, columns=[f"i{i}" for i in range(1, 7)])
+
+    result = fit_efa(
+        data,
+        EFAConfig(
+            items=("i1", "i2", "i3", "i4", "i5", "i6"),
+            n_factors=2,
+            extraction="paf",
+            rotation="promax",
+        ),
+    )
+
+    phi = result.factor_correlation.to_numpy(dtype=float)
+    assert result.rotation == "promax"
+    assert result.loadings.shape == (6, 2)
+    assert phi.shape == (2, 2)
+    assert np.allclose(np.diag(phi), 1.0)
+    assert np.allclose(phi, phi.T)
+    assert not np.allclose(phi, np.eye(2))
+
+
+def test_fit_efa_paf_oblimin_returns_factor_correlation() -> None:
+    rng = np.random.default_rng(321)
+    latent_cov = np.array([[1.0, 0.35], [0.35, 1.0]])
+    factors = rng.multivariate_normal(mean=np.zeros(2), cov=latent_cov, size=500)
+    loadings = np.array(
+        [
+            [0.84, 0.08],
+            [0.79, 0.10],
+            [0.75, 0.11],
+            [0.10, 0.82],
+            [0.12, 0.78],
+            [0.09, 0.74],
+        ]
+    )
+    noise = rng.normal(scale=0.42, size=(500, 6))
+    observed = factors @ loadings.T + noise
+    data = pd.DataFrame(observed, columns=[f"i{i}" for i in range(1, 7)])
+
+    result = fit_efa(
+        data,
+        EFAConfig(
+            items=("i1", "i2", "i3", "i4", "i5", "i6"),
+            n_factors=2,
+            extraction="paf",
+            rotation="oblimin",
+        ),
+    )
+
+    phi = result.factor_correlation.to_numpy(dtype=float)
+    assert result.rotation == "oblimin"
+    assert result.loadings.shape == (6, 2)
+    assert phi.shape == (2, 2)
+    assert np.allclose(np.diag(phi), 1.0)
+    assert np.allclose(phi, phi.T)
+    assert not np.allclose(phi, np.eye(2))
+
+
+def test_fit_efa_paf_geomin_returns_factor_correlation() -> None:
+    rng = np.random.default_rng(456)
+    latent_cov = np.array([[1.0, 0.40], [0.40, 1.0]])
+    factors = rng.multivariate_normal(mean=np.zeros(2), cov=latent_cov, size=500)
+    loadings = np.array(
+        [
+            [0.83, 0.09],
+            [0.78, 0.13],
+            [0.73, 0.10],
+            [0.12, 0.80],
+            [0.10, 0.77],
+            [0.08, 0.72],
+        ]
+    )
+    noise = rng.normal(scale=0.41, size=(500, 6))
+    observed = factors @ loadings.T + noise
+    data = pd.DataFrame(observed, columns=[f"i{i}" for i in range(1, 7)])
+
+    result = fit_efa(
+        data,
+        EFAConfig(
+            items=("i1", "i2", "i3", "i4", "i5", "i6"),
+            n_factors=2,
+            extraction="paf",
+            rotation="geomin",
+        ),
+    )
+
+    phi = result.factor_correlation.to_numpy(dtype=float)
+    assert result.rotation == "geomin"
+    assert result.loadings.shape == (6, 2)
+    assert phi.shape == (2, 2)
+    assert np.allclose(np.diag(phi), 1.0)
+    assert np.allclose(phi, phi.T)
+    assert not np.allclose(phi, np.eye(2))
+
+
+def test_fit_efa_geomin_restarts_are_reproducible_with_random_state() -> None:
+    data = _synthetic_efa_data(n=500, seed=91)
+    config = EFAConfig(
+        items=("i1", "i2", "i3", "i4", "i5", "i6"),
+        n_factors=2,
+        extraction="paf",
+        rotation="geomin",
+        rotation_restarts=3,
+        random_state=123,
+    )
+
+    result_a = fit_efa(data, config)
+    result_b = fit_efa(data, config)
+
+    assert np.allclose(result_a.loadings.to_numpy(dtype=float), result_b.loadings.to_numpy(dtype=float))
+    assert np.allclose(
+        result_a.factor_correlation.to_numpy(dtype=float),
+        result_b.factor_correlation.to_numpy(dtype=float),
+    )
+
+
+def test_fit_efa_paf_target_rotation_respects_zero_targets() -> None:
+    data = _synthetic_efa_data(n=500, seed=77)
+    target = pd.DataFrame(
+        [
+            [np.nan, 0.0],
+            [np.nan, 0.0],
+            [np.nan, 0.0],
+            [0.0, np.nan],
+            [0.0, np.nan],
+            [0.0, np.nan],
+        ],
+        index=[f"i{i}" for i in range(1, 7)],
+        columns=["F1", "F2"],
+    )
+
+    result = fit_efa(
+        data,
+        EFAConfig(
+            items=("i1", "i2", "i3", "i4", "i5", "i6"),
+            n_factors=2,
+            extraction="paf",
+            rotation="target",
+            rotation_target=target,
+        ),
+    )
+
+    loadings = result.loadings.to_numpy(dtype=float)
+    phi = result.factor_correlation.to_numpy(dtype=float)
+    off_target = np.abs(
+        np.array([
+            loadings[0, 1],
+            loadings[1, 1],
+            loadings[2, 1],
+            loadings[3, 0],
+            loadings[4, 0],
+            loadings[5, 0],
+        ])
+    )
+    primary = np.abs(
+        np.array([
+            loadings[0, 0],
+            loadings[1, 0],
+            loadings[2, 0],
+            loadings[3, 1],
+            loadings[4, 1],
+            loadings[5, 1],
+        ])
+    )
+
+    assert result.rotation == "target"
+    assert loadings.shape == (6, 2)
+    assert phi.shape == (2, 2)
+    assert np.allclose(np.diag(phi), 1.0)
+    assert np.allclose(phi, phi.T)
+    assert off_target.mean() < primary.mean()
+
+
+def test_fit_efa_target_rotation_requires_target_matrix() -> None:
+    data = _synthetic_efa_data()
+    with pytest.raises(ValueError, match="rotation_target"):
+        fit_efa(
+            data,
+            EFAConfig(
+                items=("i1", "i2", "i3", "i4", "i5", "i6"),
+                n_factors=2,
+                extraction="paf",
+                rotation="target",
+            ),
+        )
+
+
+def test_fit_efa_target_rotation_zero_weights_match_free_cells() -> None:
+    data = _synthetic_efa_data(n=500, seed=78)
+    weighted_target = pd.DataFrame(
+        [
+            [np.nan, 0.0],
+            [np.nan, 0.0],
+            [np.nan, 0.0],
+            [0.0, np.nan],
+            [0.0, np.nan],
+            [0.0, np.nan],
+        ],
+        index=[f"i{i}" for i in range(1, 7)],
+        columns=["F1", "F2"],
+    )
+    free_target = pd.DataFrame(
+        [
+            [np.nan, np.nan],
+            [np.nan, np.nan],
+            [np.nan, np.nan],
+            [0.0, np.nan],
+            [0.0, np.nan],
+            [0.0, np.nan],
+        ],
+        index=[f"i{i}" for i in range(1, 7)],
+        columns=["F1", "F2"],
+    )
+    weights = pd.DataFrame(
+        [
+            [1.0, 0.0],
+            [1.0, 0.0],
+            [1.0, 0.0],
+            [0.0, 0.0],
+            [0.0, 0.0],
+            [0.0, 0.0],
+        ],
+        index=weighted_target.index[::-1],
+        columns=weighted_target.columns,
+    )
+
+    weighted_result = fit_efa(
+        data,
+        EFAConfig(
+            items=("i1", "i2", "i3", "i4", "i5", "i6"),
+            n_factors=2,
+            extraction="paf",
+            rotation="target",
+            rotation_target=weighted_target,
+            rotation_target_weights=weights,
+            rotation_restarts=2,
+            random_state=321,
+        ),
+    )
+    free_result = fit_efa(
+        data,
+        EFAConfig(
+            items=("i1", "i2", "i3", "i4", "i5", "i6"),
+            n_factors=2,
+            extraction="paf",
+            rotation="target",
+            rotation_target=free_target,
+            rotation_restarts=2,
+            random_state=321,
+        ),
+    )
+
+    assert np.allclose(
+        weighted_result.loadings.to_numpy(dtype=float),
+        free_result.loadings.to_numpy(dtype=float),
+    )
+    assert np.allclose(
+        weighted_result.factor_correlation.to_numpy(dtype=float),
+        free_result.factor_correlation.to_numpy(dtype=float),
+    )
+
+
+def test_fit_efa_target_rotation_rejects_invalid_weights() -> None:
+    data = _synthetic_efa_data()
+    target = pd.DataFrame(
+        [
+            [np.nan, 0.0],
+            [np.nan, 0.0],
+            [np.nan, 0.0],
+            [0.0, np.nan],
+            [0.0, np.nan],
+            [0.0, np.nan],
+        ],
+        index=[f"i{i}" for i in range(1, 7)],
+        columns=["F1", "F2"],
+    )
+
+    with pytest.raises(ValueError, match="must be >= 0"):
+        fit_efa(
+            data,
+            EFAConfig(
+                items=("i1", "i2", "i3", "i4", "i5", "i6"),
+                n_factors=2,
+                extraction="paf",
+                rotation="target",
+                rotation_target=target,
+                rotation_target_weights=np.full((6, 2), -1.0),
+            ),
+        )
+
+    with pytest.raises(ValueError, match="positive weight"):
+        fit_efa(
+            data,
+            EFAConfig(
+                items=("i1", "i2", "i3", "i4", "i5", "i6"),
+                n_factors=2,
+                extraction="paf",
+                rotation="target",
+                rotation_target=target,
+                rotation_target_weights=np.zeros((6, 2), dtype=float),
+            ),
+        )
+
+
 def test_fit_efa_rejects_invalid_rotation() -> None:
     data = _synthetic_efa_data()
     config = EFAConfig(
         items=("i1", "i2", "i3", "i4", "i5", "i6"),
         n_factors=2,
-        rotation="oblimin",
+        rotation="quartimin",
     )
     with pytest.raises(ValueError, match="Unsupported rotation method"):
         fit_efa(data, config)
@@ -102,7 +443,12 @@ def test_fit_efa_rejects_missing_items() -> None:
 
 def test_list_methods_contains_defaults() -> None:
     assert "paf" in list_extraction_methods()
+    assert "minres" in list_extraction_methods()
     assert "pca" in list_extraction_methods()
+    assert "geomin" in list_rotation_methods()
+    assert "oblimin" in list_rotation_methods()
+    assert "promax" in list_rotation_methods()
+    assert "target" in list_rotation_methods()
     assert "varimax" in list_rotation_methods()
     assert "none" in list_rotation_methods()
 
@@ -133,6 +479,31 @@ def test_register_custom_methods_and_fit() -> None:
     assert result.rotation == "test_identity"
 
 
+def test_register_custom_oblique_rotation_and_fit() -> None:
+    def custom_oblique_rotation(loadings: np.ndarray, _: EFAConfig):
+        phi = np.array([[1.0, 0.25], [0.25, 1.0]], dtype=float)
+        return loadings, phi
+
+    register_rotation_method("test_oblique", custom_oblique_rotation, overwrite=True)
+
+    data = _synthetic_efa_data()
+    result = fit_efa(
+        data,
+        EFAConfig(
+            items=("i1", "i2", "i3", "i4", "i5", "i6"),
+            n_factors=2,
+            extraction="paf",
+            rotation="test_oblique",
+        ),
+    )
+
+    phi = result.factor_correlation.to_numpy(dtype=float)
+    assert result.rotation == "test_oblique"
+    assert np.allclose(np.diag(phi), 1.0)
+    assert np.allclose(phi, phi.T)
+    assert not np.allclose(phi, np.eye(2))
+
+
 def test_register_existing_method_requires_overwrite() -> None:
     def custom_rotation(loadings: np.ndarray, _: EFAConfig):
         return loadings
@@ -161,6 +532,8 @@ def test_fit_efa_rejects_invalid_optimization_settings() -> None:
         fit_efa(data, EFAConfig(items=("i1", "i2", "i3"), n_factors=1, max_iter=0))
     with pytest.raises(ValueError, match="`tol` must be > 0"):
         fit_efa(data, EFAConfig(items=("i1", "i2", "i3"), n_factors=1, tol=0.0))
+    with pytest.raises(ValueError, match="`rotation_restarts` must be >= 0"):
+        fit_efa(data, EFAConfig(items=("i1", "i2", "i3"), n_factors=1, rotation_restarts=-1))
     with pytest.raises(ValueError, match="`min_uniqueness` must be between 0 and 1"):
         fit_efa(data, EFAConfig(items=("i1", "i2", "i3"), n_factors=1, min_uniqueness=1.0))
 

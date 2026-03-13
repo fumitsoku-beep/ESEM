@@ -28,6 +28,8 @@ This is the initial documentation placeholder for `psysem`.
 
 - [EFA Phase 1 Implementation (ZH)](efa-phase1-implementation.zh-CN.md)
 - [EFA Testing and Quality Gate (ZH)](efa-testing.zh-CN.md)
+- [EFA Method Expansion Roadmap (ZH)](efa-method-expansion-roadmap.zh-CN.md)
+- [EFA Internal Interface Refactor (ZH)](efa-internal-interface-refactor.zh-CN.md)
 
 ## SEM Planning Docs
 

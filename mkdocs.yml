@@ -12,4 +12,6 @@ nav:
   - ESEM Modular Workflow (ZH): esem-modular-workflow.zh-CN.md
   - EFA Phase 1 (ZH): efa-phase1-implementation.zh-CN.md
   - EFA Testing (ZH): efa-testing.zh-CN.md
+  - EFA Method Expansion (ZH): efa-method-expansion-roadmap.zh-CN.md
+  - EFA Internal Refactor (ZH): efa-internal-interface-refactor.zh-CN.md
   - SEM Phase Plan (ZH): sem-phase-implementation.zh-CN.md

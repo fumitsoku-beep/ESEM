@@ -14,6 +14,7 @@
 ## 当前适合什么场景
 
 - 你需要在 Python 中完成 EFA 诊断、因子数建议、候选模型比较和解释输出。
+- 你希望在 EFA 中直接使用 `minres`、`promax`、`oblimin`、`geomin`、`target rotation` 等常见方法。
 - 你希望先把 ESEM/SEM 输入规范（`spec`）严格校验，减少后续拟合报错。
 - 你希望用一个统一入口先跑通 SEM 原型（语法解析、参数索引、ML 优化重启、基础拟合指标）。
 
@@ -147,6 +148,62 @@ print(result.optimization_info)
 - `python examples/basic_efa.py`
 - `python examples/basic_sem.py`
 
+### 4) 直接运行带目标矩阵的 EFA 旋转
+
+```python
+import numpy as np
+import pandas as pd
+
+from psysem import EFAConfig, fit_efa
+
+data = pd.read_csv("examples/data/efa_demo_input.csv")
+items = tuple(data.columns[:6])
+
+target = pd.DataFrame(
+    [
+        [np.nan, 0.0],
+        [np.nan, 0.0],
+        [np.nan, 0.0],
+        [0.0, np.nan],
+        [0.0, np.nan],
+        [0.0, np.nan],
+    ],
+    index=items,
+    columns=["F1", "F2"],
+)
+
+weights = pd.DataFrame(
+    [
+        [1.0, 2.0],
+        [1.0, 2.0],
+        [1.0, 2.0],
+        [2.0, 1.0],
+        [2.0, 1.0],
+        [2.0, 1.0],
+    ],
+    index=items,
+    columns=["F1", "F2"],
+)
+
+result = fit_efa(
+    data,
+    EFAConfig(
+        items=items,
+        n_factors=2,
+        extraction="minres",
+        rotation="target",
+        rotation_target=target,
+        rotation_target_weights=weights,
+        rotation_restarts=5,
+        random_state=42,
+    ),
+)
+
+print(result.loadings.round(3))
+print(result.factor_correlation.round(3))
+print(result.warnings)
+```
+
 ---
 
 ## 推荐分析流程（当前版本）
@@ -165,6 +222,9 @@ print(result.optimization_info)
 
 - `loadings`, `communalities`, `uniquenesses`, `complexity`
 - `residual_matrix`, `residual_summary`, `cross_loaded_items`, `warnings`
+- 当前 EFA 已支持提取法：`paf`、`pca`、`minres`
+- 当前 EFA 已支持旋转法：`none`、`varimax`、`promax`、`oblimin`、`geomin`、`target`
+- `target rotation` 支持 `rotation_target`、`rotation_target_weights`、`rotation_restarts`、`random_state`
 - 工作流结果中包含 `comparison_table`, `best_n_factors`, `best_interpretation`
 
 ### `SEMModel.fit`
@@ -215,7 +275,7 @@ print(result.optimization_info)
 
 1. 完成 `esem measurement` 组装与估计主链路。
 2. 打通 `EFA -> ESEM measurement -> SEM structural` 统一 pipeline。
-3. 增加 target rotation、ordinal 场景和不变性流程。
+3. 在当前已落地 `geomin` / `target rotation` 基础上，继续补全 ordinal 场景、不变性流程和 ESEM block 对接。
 4. 完善报告导出与复现元数据。
 
 ---

@@ -7,6 +7,19 @@ import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
 
+from .extraction import _extract_minres_method, _extract_paf_method, _extract_pca_method
+from .rotation import (
+    _coerce_rotation_target,
+    _coerce_rotation_target_weights,
+    _rotate_geomin,
+    _rotate_none,
+    _rotate_oblimin,
+    _rotate_promax,
+    _rotate_target,
+    _rotate_varimax,
+)
+from .rotation import _stabilize_factor_correlation
+
 
 @dataclass(frozen=True)
 class EFAConfig:
@@ -14,6 +27,10 @@ class EFAConfig:
     n_factors: int
     extraction: str = "paf"
     rotation: str = "varimax"
+    rotation_target: pd.DataFrame | NDArray[np.float64] | None = None
+    rotation_target_weights: pd.DataFrame | NDArray[np.float64] | None = None
+    rotation_restarts: int = 0
+    random_state: int | None = None
     max_iter: int = 200
     tol: float = 1e-6
     min_uniqueness: float = 0.005
@@ -38,9 +55,57 @@ class EFAResult:
     warnings: tuple[str, ...]
 
 
-ExtractionOutput = tuple[NDArray[np.float64], NDArray[np.float64], int, bool]
+@dataclass(frozen=True)
+class _ExtractionResult:
+    """Private normalized extraction result used inside ``fit_efa``.
+
+    Public extraction methods may still return the legacy tuple form for
+    backward compatibility. This internal structure exists so future methods can
+    provide richer diagnostics without changing the public API.
+    """
+
+    loadings: NDArray[np.float64]
+    communalities: NDArray[np.float64]
+    n_iter: int
+    converged: bool
+    warnings: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class _RotationResult:
+    """Private normalized rotation result.
+
+    Orthogonal rotations simply return an identity factor-correlation matrix.
+    Oblique rotations may provide a non-identity factor-correlation matrix and
+    optional rotation diagnostics in the future.
+    """
+
+    loadings: NDArray[np.float64]
+    factor_correlation: NDArray[np.float64]
+    warnings: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class _EFAModelComponents:
+    """Private bundle for post-extraction and post-rotation derived quantities."""
+
+    communalities: NDArray[np.float64]
+    uniquenesses: NDArray[np.float64]
+    explained_variance: NDArray[np.float64]
+    complexity: NDArray[np.float64]
+    residual_matrix: NDArray[np.float64]
+    residual_summary: dict[str, float]
+
+
+ExtractionOutput = tuple[NDArray[np.float64], NDArray[np.float64], int, bool] | _ExtractionResult
 ExtractionMethod = Callable[[NDArray[np.float64], EFAConfig], ExtractionOutput]
-RotationMethod = Callable[[NDArray[np.float64], EFAConfig], NDArray[np.float64]]
+RotationOutput = (
+    NDArray[np.float64]
+    | tuple[NDArray[np.float64], NDArray[np.float64]]
+    | tuple[NDArray[np.float64], NDArray[np.float64], tuple[str, ...]]
+    | _RotationResult
+)
+RotationMethod = Callable[[NDArray[np.float64], EFAConfig], RotationOutput]
 
 _EXTRACTION_REGISTRY: dict[str, ExtractionMethod] = {}
 _ROTATION_REGISTRY: dict[str, RotationMethod] = {}
@@ -67,48 +132,57 @@ def fit_efa(data: pd.DataFrame, config: EFAConfig) -> EFAResult:
     corr = data.loc[:, list(config.items)].corr().to_numpy(dtype=float)
     corr = _stabilize_correlation(corr)
 
-    unrotated_loadings, communalities, n_iter, converged = extraction_method(corr, config)
+    extraction_result = _normalize_extraction_output(extraction_method(corr, config))
 
     # Rotation is applied after extraction to improve interpretability.
-    rotated_loadings = rotation_method(unrotated_loadings, config)
-    communalities = np.sum(rotated_loadings * rotated_loadings, axis=1)
-    uniquenesses = np.clip(1.0 - communalities, config.min_uniqueness, 1.0)
-    explained = np.sum(rotated_loadings * rotated_loadings, axis=0)
-    complexity = _compute_item_complexity(rotated_loadings)
-    residual = _residual_correlation(corr, rotated_loadings, uniquenesses)
-    residual_summary = _summarize_residuals(residual)
+    rotation_result = _normalize_rotation_output(
+        rotation_method(extraction_result.loadings, config),
+        n_factors=config.n_factors,
+    )
+    components = _build_model_components(
+        corr=corr,
+        loadings=rotation_result.loadings,
+        factor_corr=rotation_result.factor_correlation,
+        min_uniqueness=config.min_uniqueness,
+    )
     cross_loaded = _detect_cross_loaded_items(
-        rotated_loadings,
+        rotation_result.loadings,
         item_names=list(config.items),
         threshold=0.30,
     )
     warnings = _build_interpretation_warnings(
-        uniquenesses=uniquenesses,
-        communalities=communalities,
+        uniquenesses=components.uniquenesses,
+        communalities=components.communalities,
         cross_loaded=cross_loaded,
-        residual_summary=residual_summary,
+        residual_summary=components.residual_summary,
         min_uniqueness=config.min_uniqueness,
     )
+    warnings = list(extraction_result.warnings) + list(rotation_result.warnings) + warnings
 
     factor_names = [f"F{i + 1}" for i in range(config.n_factors)]
     item_names = list(config.items)
-    factor_corr = np.eye(config.n_factors, dtype=float)
     return EFAResult(
-        loadings=pd.DataFrame(rotated_loadings, index=item_names, columns=factor_names),
-        communalities=pd.Series(communalities, index=item_names, name="communality"),
-        uniquenesses=pd.Series(uniquenesses, index=item_names, name="uniqueness"),
-        complexity=pd.Series(complexity, index=item_names, name="complexity"),
-        explained_variance=pd.Series(explained, index=factor_names, name="explained_variance"),
+        loadings=pd.DataFrame(rotation_result.loadings, index=item_names, columns=factor_names),
+        communalities=pd.Series(components.communalities, index=item_names, name="communality"),
+        uniquenesses=pd.Series(components.uniquenesses, index=item_names, name="uniqueness"),
+        complexity=pd.Series(components.complexity, index=item_names, name="complexity"),
+        explained_variance=pd.Series(
+            components.explained_variance, index=factor_names, name="explained_variance"
+        ),
         correlation_matrix=pd.DataFrame(corr, index=item_names, columns=item_names),
-        residual_matrix=pd.DataFrame(residual, index=item_names, columns=item_names),
-        residual_summary=residual_summary,
-        factor_correlation=pd.DataFrame(factor_corr, index=factor_names, columns=factor_names),
+        residual_matrix=pd.DataFrame(components.residual_matrix, index=item_names, columns=item_names),
+        residual_summary=components.residual_summary,
+        factor_correlation=pd.DataFrame(
+            rotation_result.factor_correlation,
+            index=factor_names,
+            columns=factor_names,
+        ),
         extraction=extraction,
         rotation=rotation,
-        n_iter=n_iter,
-        converged=converged,
+        n_iter=extraction_result.n_iter,
+        converged=extraction_result.converged,
         cross_loaded_items=tuple(cross_loaded),
-        warnings=tuple(warnings),
+        warnings=tuple(dict.fromkeys(warnings)),
     )
 
 
@@ -126,6 +200,8 @@ def _validate_inputs(data: pd.DataFrame, config: EFAConfig) -> None:
         raise ValueError("`max_iter` must be > 0.")
     if config.tol <= 0:
         raise ValueError("`tol` must be > 0.")
+    if config.rotation_restarts < 0:
+        raise ValueError("`rotation_restarts` must be >= 0.")
     if not (0.0 < config.min_uniqueness < 1.0):
         raise ValueError("`min_uniqueness` must be between 0 and 1.")
 
@@ -143,6 +219,18 @@ def _validate_inputs(data: pd.DataFrame, config: EFAConfig) -> None:
     if rotation not in _ROTATION_REGISTRY:
         choices = ", ".join(list_rotation_methods())
         raise ValueError(f"Unsupported rotation method `{rotation}`. Available: {choices}.")
+    if rotation == "target":
+        target = _coerce_rotation_target(
+            config.rotation_target,
+            item_names=list(config.items),
+            n_factors=config.n_factors,
+        )
+        _coerce_rotation_target_weights(
+            config.rotation_target_weights,
+            item_names=list(config.items),
+            n_factors=config.n_factors,
+            target=target,
+        )
 
 
 def register_extraction_method(
@@ -211,8 +299,13 @@ def _ensure_default_methods() -> None:
         return
 
     _EXTRACTION_REGISTRY.setdefault("paf", _extract_paf_method)
+    _EXTRACTION_REGISTRY.setdefault("minres", _extract_minres_method)
     _EXTRACTION_REGISTRY.setdefault("pca", _extract_pca_method)
     _ROTATION_REGISTRY.setdefault("none", _rotate_none)
+    _ROTATION_REGISTRY.setdefault("geomin", _rotate_geomin)
+    _ROTATION_REGISTRY.setdefault("oblimin", _rotate_oblimin)
+    _ROTATION_REGISTRY.setdefault("promax", _rotate_promax)
+    _ROTATION_REGISTRY.setdefault("target", _rotate_target)
     _ROTATION_REGISTRY.setdefault("varimax", _rotate_varimax)
     _DEFAULTS_LOADED = True
 
@@ -226,112 +319,88 @@ def _normalize_method_name(name: str, kind: str) -> str:
     return normalized
 
 
-def _extract_pca_method(corr: NDArray[np.float64], config: EFAConfig) -> ExtractionOutput:
-    return _extract_pca(corr=corr, n_factors=config.n_factors)
+def _normalize_extraction_output(output: ExtractionOutput) -> _ExtractionResult:
+    """Normalize legacy and future extraction outputs into one private contract."""
 
+    if isinstance(output, _ExtractionResult):
+        return output
 
-def _extract_paf_method(corr: NDArray[np.float64], config: EFAConfig) -> ExtractionOutput:
-    return _extract_paf(
-        corr=corr,
-        n_factors=config.n_factors,
-        max_iter=config.max_iter,
-        tol=config.tol,
-        min_uniqueness=config.min_uniqueness,
+    loadings, communalities, n_iter, converged = output
+    return _ExtractionResult(
+        loadings=np.asarray(loadings, dtype=float),
+        communalities=np.asarray(communalities, dtype=float),
+        n_iter=int(n_iter),
+        converged=bool(converged),
     )
 
 
-def _rotate_none(loadings: NDArray[np.float64], _: EFAConfig) -> NDArray[np.float64]:
-    return loadings
-
-
-def _rotate_varimax(loadings: NDArray[np.float64], _: EFAConfig) -> NDArray[np.float64]:
-    return _varimax(loadings)
-
-
-def _extract_pca(corr: NDArray[np.float64], n_factors: int) -> tuple[NDArray[np.float64], NDArray[np.float64], int, bool]:
-    eigvals, eigvecs = np.linalg.eigh(corr)
-    order = np.argsort(eigvals)[::-1]
-    eigvals = eigvals[order]
-    eigvecs = eigvecs[:, order]
-
-    kept_vals = np.clip(eigvals[:n_factors], 0.0, None)
-    kept_vecs = eigvecs[:, :n_factors]
-    loadings = kept_vecs * np.sqrt(kept_vals)
-    communalities = np.sum(loadings * loadings, axis=1)
-    return loadings, communalities, 1, True
-
-
-def _extract_paf(
-    corr: NDArray[np.float64],
+def _normalize_rotation_output(
+    output: RotationOutput,
+    *,
     n_factors: int,
-    max_iter: int,
-    tol: float,
-    min_uniqueness: float,
-) -> tuple[NDArray[np.float64], NDArray[np.float64], int, bool]:
-    p = corr.shape[0]
-    # Initialize communalities with SMC as the standard PAF starting point.
-    smc = _squared_multiple_correlations(corr)
-    communalities = np.clip(smc, min_uniqueness, 1.0 - min_uniqueness)
-    converged = False
-    n_iter = 0
-    loadings = np.zeros((p, n_factors), dtype=float)
+) -> _RotationResult:
+    """Normalize orthogonal and oblique rotation results into one private contract."""
 
-    for n_iter in range(1, max_iter + 1):
-        reduced = corr.copy()
-        # PAF repeatedly replaces correlation diagonal with current communalities.
-        np.fill_diagonal(reduced, communalities)
-        eigvals, eigvecs = np.linalg.eigh(reduced)
-        order = np.argsort(eigvals)[::-1]
-        eigvals = eigvals[order]
-        eigvecs = eigvecs[:, order]
+    if isinstance(output, _RotationResult):
+        return _RotationResult(
+            loadings=np.asarray(output.loadings, dtype=float),
+            factor_correlation=_stabilize_factor_correlation(output.factor_correlation),
+            warnings=tuple(output.warnings),
+        )
 
-        kept_vals = np.clip(eigvals[:n_factors], 0.0, None)
-        kept_vecs = eigvecs[:, :n_factors]
-        loadings = kept_vecs * np.sqrt(kept_vals)
-        updated = np.sum(loadings * loadings, axis=1)
-        updated = np.clip(updated, min_uniqueness, 1.0 - min_uniqueness)
+    if isinstance(output, tuple):
+        if len(output) == 3:
+            loadings, factor_corr, warnings = output
+            return _RotationResult(
+                loadings=np.asarray(loadings, dtype=float),
+                factor_correlation=_stabilize_factor_correlation(factor_corr),
+                warnings=tuple(warnings),
+            )
 
-        delta = np.max(np.abs(updated - communalities))
-        communalities = updated
-        if delta < tol:
-            converged = True
-            break
+        loadings, factor_corr = output
+        return _RotationResult(
+            loadings=np.asarray(loadings, dtype=float),
+            factor_correlation=_stabilize_factor_correlation(factor_corr),
+        )
 
-    return loadings, communalities, n_iter, converged
+    return _RotationResult(
+        loadings=np.asarray(output, dtype=float),
+        factor_correlation=np.eye(n_factors, dtype=float),
+    )
 
 
-def _squared_multiple_correlations(corr: NDArray[np.float64]) -> NDArray[np.float64]:
-    inv_corr = np.linalg.pinv(corr)
-    diag = np.clip(np.diag(inv_corr), 1e-12, None)
-    smc = 1.0 - (1.0 / diag)
-    return np.clip(smc, 0.0, 1.0)
-
-
-def _varimax(
+def _build_model_components(
+    *,
+    corr: NDArray[np.float64],
     loadings: NDArray[np.float64],
-    gamma: float = 1.0,
-    q: int = 50,
-    tol: float = 1e-6,
+    factor_corr: NDArray[np.float64],
+    min_uniqueness: float,
+) -> _EFAModelComponents:
+    """Compute derived EFA quantities from a normalized extraction+rotation solution."""
+
+    communalities = _compute_communalities(loadings, factor_corr)
+    uniquenesses = np.clip(1.0 - communalities, min_uniqueness, 1.0)
+    explained_variance = np.sum(loadings * loadings, axis=0)
+    complexity = _compute_item_complexity(loadings)
+    residual_matrix = _residual_correlation(corr, loadings, uniquenesses, factor_corr)
+    residual_summary = _summarize_residuals(residual_matrix)
+    return _EFAModelComponents(
+        communalities=communalities,
+        uniquenesses=uniquenesses,
+        explained_variance=explained_variance,
+        complexity=complexity,
+        residual_matrix=residual_matrix,
+        residual_summary=residual_summary,
+    )
+
+
+def _compute_communalities(
+    loadings: NDArray[np.float64],
+    factor_corr: NDArray[np.float64],
 ) -> NDArray[np.float64]:
-    p, k = loadings.shape
-    rotation = np.eye(k)
-    previous = 0.0
-    rotated = loadings.copy()
-
-    for _ in range(q):
-        rotated = loadings @ rotation
-        gram = rotated.T @ rotated
-        diagonal = np.diag(np.diag(gram))
-        # Classical orthogonal varimax criterion update step.
-        transformed = loadings.T @ (rotated**3 - (gamma / p) * rotated @ diagonal)
-        u, s, vh = np.linalg.svd(transformed)
-        rotation = u @ vh
-        current = np.sum(s)
-        if previous > 0 and current - previous < tol:
-            break
-        previous = current
-
-    return loadings @ rotation
+    reproduced_common = loadings @ factor_corr @ loadings.T
+    communalities = np.diag(reproduced_common)
+    return np.clip(communalities, 0.0, 1.0)
 
 
 def _stabilize_correlation(corr: NDArray[np.float64]) -> NDArray[np.float64]:
@@ -358,8 +427,9 @@ def _residual_correlation(
     corr: NDArray[np.float64],
     loadings: NDArray[np.float64],
     uniquenesses: NDArray[np.float64],
+    factor_corr: NDArray[np.float64],
 ) -> NDArray[np.float64]:
-    reproduced = loadings @ loadings.T + np.diag(uniquenesses)
+    reproduced = loadings @ factor_corr @ loadings.T + np.diag(uniquenesses)
     reproduced = (reproduced + reproduced.T) / 2.0
     np.fill_diagonal(reproduced, 1.0)
     residual = corr - reproduced
