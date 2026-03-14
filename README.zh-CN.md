@@ -18,7 +18,7 @@
 | 参数                 | 类型             | 必填 | 默认值  | 说明                                            |
 | -------------------- | ---------------- | ---- | ------- | ----------------------------------------------- |
 | `blocks`             | `list[dict]`     | 是   | -       | ESEM 分块列表。                                 |
-| `estimator`          | `str`            | 是   | -       | 估计方法。当前支持：`ML`、`MLR`、`WLSMV`。      |
+| `estimator`          | `str`            | 是   | -       | 估计方法。规格层接受：`ML`、`MLR`、`WLSMV`；当前完整优化主路径仍以 `ML/MLR` 为主。 |
 | `variable_types`     | `dict[str, str]` | 是   | -       | 变量类型映射。取值：`continuous`、`ordinal`。   |
 | `rotation`           | `dict`           | 否   | `None`  | 全局旋转设置（可被 block 内的 rotation 覆盖）。 |
 | `structural`         | `list[str]`      | 否   | `[]`    | 结构路径表达式（目标行为）。                    |
@@ -74,10 +74,12 @@ spec = {
 - 已实现：`spec` 数据结构与基础校验
 - 已实现：EFA 提取法 `paf`、`pca`、`minres`
 - 已实现：EFA 旋转法 `none`、`varimax`、`promax`、`oblimin`、`geomin`、`target`
+- 已实现：共享 preprocessing 层，统一支持 `pairwise`、`dropna`、`pearson`、`spearman`、`polychoric`
 - 已实现：`target rotation` 的目标矩阵、目标权重、多起点重启与随机种子控制
 - 已实现：`SEMModel.fit(data, spec=...)` 主入口（ML 原型路径）
 - 新增：`run_esem_workflow(...)` 最小可跑路径（`block_full` 候选）
-- 后续：多候选 generator/judge/selector、更完整 ESEM 估计器
+- 新增：EFA workflow 与 ESEM block bridge 已复用共享 preprocessing，并能根据 block 类型自动选择相关矩阵策略
+- 下一步：`network` MVP、多候选 generator/judge/selector、更完整 ordinal/稳健估计路径
 
 ## 当前 EFA `target rotation` 说明
 

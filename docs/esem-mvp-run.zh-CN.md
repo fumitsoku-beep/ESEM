@@ -78,12 +78,13 @@ python examples/basic_esem.py
 1. 当前仅实现 `block_full` 单候选策略；
 2. 多候选生成（如 `efa_seeded`、`target_pattern`）尚未接入；
 3. selector 目前为单一 `best_score`；
-4. `WLSMV` 等非 ML 主路径仍未接入完整 SEM 优化流程；
-5. 该入口是“可跑通 MVP”，不是最终 ESEM 全能力版。
+4. block-level EFA bridge 虽已复用共享 preprocessing，并能按 block 自动选择 `pearson / spearman / polychoric`，但多候选 ESEM 主线仍未形成；
+5. `WLSMV` 等非 ML 主路径仍未接入完整 SEM 优化流程；
+6. 该入口是“可跑通 MVP”，不是最终 ESEM 全能力版。
 
 ---
 
-## 5. 下一步（依据现有文档的明确优先级）
+## 5. 下一步（如果继续沿 ESEM workflow 推进）
 
 结合 [esem-modular-workflow.zh-CN.md](esem-modular-workflow.zh-CN.md) 和当前代码状态，建议按下面顺序推进：
 
@@ -92,6 +93,7 @@ python examples/basic_esem.py
 3. **P0**：实现 judge 注册机制（Step 6）并把当前 judge 改为可插拔
 4. **P0**：实现 selector 扩展（Step 12），支持多候选稳定选择
 5. **P1**：补充端到端回归测试与多策略比较测试（Step 15）
+6. **P1**：最后再推进 `WLSMV` 等非 ML 闭环，而不是在 MVP 阶段提前扩张
 
 ---
 
@@ -99,4 +101,4 @@ python examples/basic_esem.py
 
 1. [ESEM 模块化判断工作流实施文档（ZH）](esem-modular-workflow.zh-CN.md)
 2. [SEM Phase 实施文档（ZH）](sem-phase-implementation.zh-CN.md)
-3. [SEM Phase 实施文档（ZH）](sem-phase-implementation.zh-CN.md)
+3. [共享预处理模块抽取与落地文档（ZH）](preprocessing-module-extraction.zh-CN.md)

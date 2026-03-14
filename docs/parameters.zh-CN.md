@@ -7,7 +7,7 @@
 | 参数 | 类型 | 必填 | 默认值 | 说明 |
 | --- | --- | --- | --- | --- |
 | `blocks` | `list[dict]` | 是 | - | ESEM 分块列表。 |
-| `estimator` | `str` | 是 | - | 估计方法。当前支持：`ML`、`MLR`、`WLSMV`。 |
+| `estimator` | `str` | 是 | - | 估计方法。规格层接受：`ML`、`MLR`、`WLSMV`；当前完整优化主路径仍以 `ML/MLR` 为主。 |
 | `variable_types` | `dict[str, str]` | 是 | - | 变量类型映射。取值：`continuous`、`ordinal`。 |
 | `rotation` | `dict` | 否 | `None` | 全局旋转设置（可被 block 内设置覆盖）。 |
 | `structural` | `list[str]` | 否 | `[]` | 结构路径表达式。 |

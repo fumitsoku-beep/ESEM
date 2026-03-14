@@ -1261,15 +1261,15 @@ Empirical Kaiser Criterion 对传统 Kaiser 做经验修正，希望减少其过
 
 ## 当前最优先的第二阶段能力
 
-1. 输入预处理层
-2. `pairwise`
-3. `spearman`
-4. `polychoric`
-5. `vss`
+1. `polychoric` 数值稳健性与更完整 metadata
+2. mixed-type / `tetrachoric` 扩展
+3. `vss`
+4. 共享 preprocessing 的 network 直接复用
+5. 更深的 ESEM block 对接与 target-pattern 衔接
 
 这批方法能直接把 `psysem` 从“当前基础 EFA 工作流”往“更专业心理测量工具”推进。
 
-> 更新：`ml` 已完成首版实现，因此当前最优先的下一步应转为“输入预处理层”，再在这层上依次接入 `pairwise`、`spearman`、`polychoric` 与 `vss`。
+> 更新：输入预处理层与 workflow/ESEM bridge 复用已经落地，因此当前最优先的下一步应转为“补强 ordinal 路线 + 让 network 直接复用共享层”，而不是继续把 preprocessing 当成待实现事项。
 
 ## 当前不建议优先做的
 
@@ -1286,12 +1286,13 @@ Empirical Kaiser Criterion 对传统 Kaiser 做经验修正，希望减少其过
 
 建议后续在 EFA 配置中逐步补：
 
-- `correlation_method`
-- `missing_strategy`
+- `auto_correlation`
+- `association_metadata`
 - `rotation_kwargs`
 - `extraction_kwargs`
 - `retention_methods`
 - `matrix_stabilization`
+- `workflow_level_preprocessing`
 
 ### 文档侧建议
 
@@ -1308,4 +1309,4 @@ README 或参数文档中应逐步明确：
 
 如果只保留一句开发建议，就是：
 
-**先补“输入预处理层”，再在这层上接入 `pairwise + spearman + polychoric + vss`，并继续把 `target` / `geomin` 更好地接入 ESEM workflow。**
+**先把共享 preprocessing 用起来，再补 `polychoric` 稳健性 / mixed-type / `vss`，并继续把 `target` / `geomin` 更好地接入 ESEM 与未来 network workflow。**

@@ -3,8 +3,8 @@
 本文档用于说明如何把原先挂在 `psysem.efa` 下的输入预处理能力，整理成一个**可被 EFA / ESEM / Network Analysis 共用**的独立模块；同时记录这项抽取在当前代码基线上的实际落地状态。
 
 当前日期：2026-03-14  
-适用分支：`feat/efa-rotation-expansion`  
-当前代码基线：`a5dfb98 feat(efa): add polychoric input preprocessing`
+适用分支：`main`
+当前代码基线：`a17c1ac refactor(efa): unify shared preprocessing across workflows`
 
 ---
 
@@ -25,7 +25,7 @@
 3. **当前仍未完成的边界**：
    - 还没有开始 `network/` 模块本体
    - 还没有把 ordinal 路线推进到完整 SEM `WLSMV`
-   - 文档分支 `docs/content-updates` 后续如果再合入，`docs/index.md` 与 `mkdocs.yml` 仍可能需要手动解冲突
+   - `polychoric` 的数值稳健性、mixed-type 扩展与 network 结果对象仍是后续重点
 
 因此，本文档后续内容既保留“为什么要这样抽”和“按什么结构抽”，也补充“现在已经做到哪里了”。
 

@@ -316,19 +316,19 @@ Fit indices:
 - [ESEM baseline 对比文档（ZH）](docs/esem-baseline-landscape.zh-CN.md)
 - [ESEM 最小可跑路径（ZH）](docs/esem-mvp-run.zh-CN.md)
 - [参数总览（ZH）](docs/parameters.zh-CN.md)
-- [EFA Phase 1 实施文档（ZH）](docs/efa-phase1-implementation.zh-CN.md)
-- [EFA 测试与质量门禁（ZH）](docs/efa-testing.zh-CN.md)
-- [SEM 分阶段实施（ZH）](docs/sem-phase-implementation.zh-CN.md)
-- [SEM 下一步计划（ZH）](docs/sem-next-steps.zh-CN.md)
+- [共享预处理模块抽取与落地（ZH）](docs/preprocessing-module-extraction.zh-CN.md)
+- [EFA Phase 1 实施与测试（ZH）](docs/efa-phase1-implementation.zh-CN.md)
+- [EFA 方法扩展路线图（ZH）](docs/efa-method-expansion-roadmap.zh-CN.md)
+- [SEM 分阶段实施与下一阶段路线（ZH）](docs/sem-phase-implementation.zh-CN.md)
 
 ---
 
 ## 路线图（简版）
 
-1. 完成 `esem measurement` 组装与估计主链路。
-2. 打通 `EFA -> ESEM measurement -> SEM structural` 统一 pipeline。
-3. 在当前已落地 `geomin` / `target rotation` 基础上，继续补全 ordinal 场景、不变性流程和 ESEM block 对接。
-4. 完善报告导出与复现元数据。
+1. 基于已落地的共享 preprocessing，启动 `network` MVP。
+2. 继续推进 ESEM 模块化路线：generator / judge / selector，以及 `efa_seeded`。
+3. 继续补强 ordinal/稳健路径：`polychoric` 数值稳健性、mixed-type 扩展、`MLR/WLSMV` 与不变性。
+4. 完善报告导出、复现元数据和文档一致性。
 
 ---
 
