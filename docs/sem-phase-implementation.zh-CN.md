@@ -2,10 +2,10 @@
 
 本文档用于规划 `psysem` 从当前 `SEMModel` 占位接口，升级到可用于心理测量场景的可估计 SEM/ESEM 主流程。
 
-当前日期：2026-03-11  
+当前日期：2026-03-14
 适用分支：`main`
 
-实现状态：Phase 1 已完成基础版；Phase 2 已完成第二批；Phase 3 已落地第七批（`Beta/Gamma/Psi` 草图 + 循环依赖基础检查 + 统一参数索引映射 + ML implied covariance/优化原型 + 数值推断原型 + 基础拟合指标原型 + 优化鲁棒性原型）；估计器仍为占位。
+实现状态：Phase 1 已完成基础版；Phase 2 已完成第二批；Phase 3 已落地第七批（`Beta/Gamma/Psi` 草图 + 循环依赖基础检查 + 统一参数索引映射 + ML implied covariance/优化原型 + 数值推断原型 + 基础拟合指标原型 + 优化鲁棒性原型）；最近的 shared preprocessing / ESEM bridge 更新未改动 SEM optimizer 主链，估计器仍为占位。
 
 ---
 
@@ -35,6 +35,7 @@
 2. measurement/structural 矩阵层已起步，稳健估计闭环尚未完善。
 3. ML、推断与基础拟合指标已起步原型，但 MLR/WLSMV 与稳健统计尚未完成。
 4. 无端到端 SEM 数值回归测试。
+5. ESEM block bridge 已存在，但还没有把 bridge 结果真正传入 SEM 起始值、target pattern 或 ordinal 样本统计路径。
 
 ---
 
@@ -72,6 +73,22 @@ Phase 3 已落地（第七批）：
 11. 新建 `inference` 模块，落地数值 Hessian 推断原型（SE/z/p/CI）并接入 `SEMModel.fit`。
 12. `fit_indices` 升级为基础可计算版本（AIC/BIC/SRMR/CFI/TLI/RMSEA）并接入 `SEMModel.fit`。
 13. 引入 `SEMFitConfig` / `ParameterBoundsConfig`，支持拟合配置、重启策略与失败分类诊断。
+
+## 2.2 与最近 EFA/ESEM 更新的关系（2026-03-14）
+
+最近这轮更新真正改变的是 EFA / ESEM 的共享输入层与 block-level EFA bridge，不是 SEM 数值优化器本身。
+
+需要明确三点：
+
+1. 共享 preprocessing 已经会影响 ESEM 中的 block EFA bridge，尤其是 ordinal block 现在可自动走 `polychoric`，混合 block 默认走 `spearman`
+2. 直接调用 `SEMModel.fit(data, spec=...)` 时，measurement / structural / estimation / inference / fit-indices 这条主链没有因为最近更新而改变
+3. 当前 bridge 的结果仍主要影响候选评分、warnings 与解释层，还没有进入 SEM 参数初始化、target pattern 或 `WLSMV` 路径
+
+因此，当前最需要补的不是再给 SEM 主链增加一个新估计器，而是：
+
+1. 先把 ESEM bridge 结果接成 candidate generation / start values
+2. 再决定哪些输入应该进入 ordinal SEM 的正式估计层
+3. 最后再推进 `WLSMV` 等非 ML 闭环
 
 ---
 

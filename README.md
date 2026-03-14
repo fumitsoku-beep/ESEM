@@ -16,11 +16,13 @@
 - 你需要在 Python 中完成 EFA 诊断、因子数建议、候选模型比较和解释输出。
 - 你希望在 EFA 中直接使用 `minres`、`promax`、`oblimin`、`geomin`、`target rotation` 等常见方法。
 - 你希望先把 ESEM/SEM 输入规范（`spec`）严格校验，减少后续拟合报错。
+- 你希望在 ESEM block bridge 中按题项类型自动使用 `pearson / spearman / polychoric`，并查看 bridge 评分与 warning。
 - 你希望用一个统一入口先跑通 SEM 原型（语法解析、参数索引、ML 优化重启、基础拟合指标）。
 
 ## 当前边界（请先了解）
 
 - 完整心理学 ESEM 主流程仍在建设中，`esem measurement` 还未全部落地。
+- 当前 ESEM block-level EFA bridge 主要影响候选评分、warnings 与解释层，还没有直接进入 SEM 起始值或 target-pattern 主链。
 - `MLR/WLSMV` 在 SEM 估计层面仍是后续里程碑（当前主原型路径是 ML）。
 - 多组不变性 API 仍是占位接口，尚未提供完整可用实现。
 

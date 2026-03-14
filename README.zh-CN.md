@@ -79,7 +79,8 @@ spec = {
 - 已实现：`SEMModel.fit(data, spec=...)` 主入口（ML 原型路径）
 - 新增：`run_esem_workflow(...)` 最小可跑路径（`block_full` 候选）
 - 新增：EFA workflow 与 ESEM block bridge 已复用共享 preprocessing，并能根据 block 类型自动选择相关矩阵策略
-- 下一步：`network` MVP、多候选 generator/judge/selector、更完整 ordinal/稳健估计路径
+- 当前边界：ESEM block bridge 目前主要影响候选评分、warnings 与解释层，还没有直接进入 SEM 起始值或 target-pattern 主链
+- 下一步：多候选 generator/judge/selector、bridge -> candidate generation、更完整 ordinal/稳健估计路径，之后再推进 `network` MVP
 
 ## 当前 EFA `target rotation` 说明
 
