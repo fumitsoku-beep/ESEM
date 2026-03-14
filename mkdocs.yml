@@ -10,6 +10,8 @@ nav:
   - Parameters (ZH): parameters.zh-CN.md
   - Shared:
       - Preprocessing Module Extraction (ZH): preprocessing-module-extraction.zh-CN.md
+  - Network:
+      - Network MVP (ZH): network-mvp.zh-CN.md
   - EFA:
       - EFA Phase 1 (ZH): efa-phase1-implementation.zh-CN.md
       - EFA Method Expansion (ZH): efa-method-expansion-roadmap.zh-CN.md

@@ -30,6 +30,10 @@
 
 - [Shared Preprocessing Module Extraction (ZH)](preprocessing-module-extraction.zh-CN.md)
 
+### Network
+
+- [Network MVP (ZH)](network-mvp.zh-CN.md)
+
 ### EFA
 
 - [EFA Phase 1 Implementation (ZH)](efa-phase1-implementation.zh-CN.md)
@@ -50,7 +54,8 @@
 
 ## 当前范围
 
-- 共享 `preprocessing` 模块已经独立出来，可供 EFA / ESEM / 未来 network 共用
+- 共享 `preprocessing` 模块已经独立出来，可供 EFA / ESEM / network 共用
+- `psysem.network` 已具备 static undirected item-network MVP，可输出 edge/node 表
 - `psysem.data` 已覆盖 ESEM `spec` / 数据输入校验
 - `psysem.efa` 已具备诊断、因子数建议、候选评分与解释层基础能力
 - EFA 提取/旋转已扩展到 `minres`、`promax`、`oblimin`、`geomin`、`target`
@@ -59,13 +64,14 @@
 
 ## 当前最建议的下一步
 
-1. 基于共享 preprocessing 起 `network` MVP
+1. 增强 `network`：正则化、稳定性、可视化与 reporting
 2. 继续推进 ESEM 模块化：`efa_seeded`、generator/judge/selector
 3. 继续补 ordinal / robust 路线：`polychoric` 稳健性、mixed-type、`MLR/WLSMV`
 
 ## 建议阅读顺序
 
 1. 如果要看“当前怎么用”，先读 [docs/parameters.zh-CN.md](parameters.zh-CN.md) 与 [docs/esem-mvp-run.zh-CN.md](esem-mvp-run.zh-CN.md)。
-2. 如果要看“共享预处理层已经做到哪里、为什么它是下一步 network 的基础”，先读 [docs/preprocessing-module-extraction.zh-CN.md](preprocessing-module-extraction.zh-CN.md)。
-3. 如果要看“EFA 现在到哪一步、后面还缺什么”，读 [docs/efa-phase1-implementation.zh-CN.md](efa-phase1-implementation.zh-CN.md) 与 [docs/efa-method-expansion-roadmap.zh-CN.md](efa-method-expansion-roadmap.zh-CN.md)。
-4. 如果要看“ESEM / SEM 后续怎么推进”，读 [docs/esem-modular-workflow.zh-CN.md](esem-modular-workflow.zh-CN.md)、[docs/esem-mvp-run.zh-CN.md](esem-mvp-run.zh-CN.md) 与 [docs/sem-phase-implementation.zh-CN.md](sem-phase-implementation.zh-CN.md)。
+2. 如果要看“共享预处理层已经做到哪里、为什么它能直接服务 network”，先读 [docs/preprocessing-module-extraction.zh-CN.md](preprocessing-module-extraction.zh-CN.md)。
+3. 如果要直接看当前 network 怎么用，读 [docs/network-mvp.zh-CN.md](network-mvp.zh-CN.md)。
+4. 如果要看“EFA 现在到哪一步、后面还缺什么”，读 [docs/efa-phase1-implementation.zh-CN.md](efa-phase1-implementation.zh-CN.md) 与 [docs/efa-method-expansion-roadmap.zh-CN.md](efa-method-expansion-roadmap.zh-CN.md)。
+5. 如果要看“ESEM / SEM 后续怎么推进”，读 [docs/esem-modular-workflow.zh-CN.md](esem-modular-workflow.zh-CN.md)、[docs/esem-mvp-run.zh-CN.md](esem-mvp-run.zh-CN.md) 与 [docs/sem-phase-implementation.zh-CN.md](sem-phase-implementation.zh-CN.md)。

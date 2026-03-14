@@ -2,9 +2,9 @@
 
 本文档用于说明如何把原先挂在 `psysem.efa` 下的输入预处理能力，整理成一个**可被 EFA / ESEM / Network Analysis 共用**的独立模块；同时记录这项抽取在当前代码基线上的实际落地状态。
 
-当前日期：2026-03-14  
-适用分支：`main`
-当前代码基线：`a17c1ac refactor(efa): unify shared preprocessing across workflows`
+当前日期：2026-03-14
+适用分支：`NetWork-Analysis`
+当前代码基线：已包含 shared preprocessing 与 network MVP
 
 ---
 
@@ -23,7 +23,7 @@
    - `efa/workflow.py` 已能把 preprocessing 配置统一透传到 diagnostics / selection / fit
    - `esem/workflow.py` 的 block-level EFA bridge 已能透传 `variable_types`，并根据 block 类型自动选择 `pearson / spearman / polychoric`
 3. **当前仍未完成的边界**：
-   - 还没有开始 `network/` 模块本体
+   - `network/` 已落地 MVP，但还没有进入正则化、稳定性和可视化阶段
    - 还没有把 ordinal 路线推进到完整 SEM `WLSMV`
    - `polychoric` 的数值稳健性、mixed-type 扩展与 network 结果对象仍是后续重点
 
@@ -107,15 +107,15 @@
 这轮抽取已经完成，但还剩下几个明确边界没有推进：
 
 1. `build_efa_input_matrix(...)` 仍保留私有 `_EFAInputMatrix` 兼容对象
-2. 共享层已经可复用，但 `network/` 还没有正式起包
-3. preprocessing recommendation / warning 已统一，但最终 reporting 还没有单独整理为 network 友好输出
-4. ordinal 相关矩阵已经进入 EFA / ESEM bridge，但完整 SEM ordinal 估计链路仍未接上
+2. `network/` 已经起包并落地 MVP，但正则化、稳定性和可视化仍未进入主线
+3. preprocessing recommendation / warning 已统一，但 reporting 与更丰富 network metadata 仍可继续增强
+4. ordinal 相关矩阵已经进入 EFA / ESEM / network，但完整 SEM ordinal 估计链路仍未接上
 
 ### 2.3 当前最关键的判断
 
 当前问题已经从“要不要抽共享预处理层”，转成了：
 
-> 共享预处理层已经落地，下一步应直接基于它推进 `network`，而不是再在 `efa` 或 `esem` 下复制一套输入逻辑。
+> 共享预处理层和 `network` MVP 都已经落地，下一步应补强 network 稳定性 / 正则化与 ordinal 路线，而不是再在 `efa` 或 `esem` 下复制一套输入逻辑。
 
 ---
 

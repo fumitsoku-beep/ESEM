@@ -1264,12 +1264,12 @@ Empirical Kaiser Criterion 对传统 Kaiser 做经验修正，希望减少其过
 1. `polychoric` 数值稳健性与更完整 metadata
 2. mixed-type / `tetrachoric` 扩展
 3. `vss`
-4. 共享 preprocessing 的 network 直接复用
+4. network 正则化 / stability 路径
 5. 更深的 ESEM block 对接与 target-pattern 衔接
 
 这批方法能直接把 `psysem` 从“当前基础 EFA 工作流”往“更专业心理测量工具”推进。
 
-> 更新：输入预处理层与 workflow/ESEM bridge 复用已经落地，因此当前最优先的下一步应转为“补强 ordinal 路线 + 让 network 直接复用共享层”，而不是继续把 preprocessing 当成待实现事项。
+> 更新：输入预处理层、workflow/ESEM bridge 复用、network MVP 都已经落地，因此当前最优先的下一步应转为“补强 ordinal 路线 + network 稳定性/正则化”，而不是继续把 preprocessing 当成待实现事项。
 
 ## 当前不建议优先做的
 
@@ -1309,4 +1309,4 @@ README 或参数文档中应逐步明确：
 
 如果只保留一句开发建议，就是：
 
-**先把共享 preprocessing 用起来，再补 `polychoric` 稳健性 / mixed-type / `vss`，并继续把 `target` / `geomin` 更好地接入 ESEM 与未来 network workflow。**
+**先在已落地的共享 preprocessing 与 network MVP 基础上补 `polychoric` 稳健性 / mixed-type / `vss`，并继续把 `target` / `geomin` 更好地接入 ESEM 与后续 network workflow。**

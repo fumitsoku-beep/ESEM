@@ -69,6 +69,7 @@ from .model import (
     model_spec_from_esem_spec,
     parse_model,
 )
+from .network import NetworkConfig, NetworkResult, fit_network
 from .parameter_index import ParameterIndexEntry, ParameterIndexMap, build_parameter_index_map
 from .reporting import to_markdown
 from .result import SEMResult
@@ -111,6 +112,7 @@ __all__ = [
     "FactorSelectionConfig",
     "FactorSelectionResult",
     "fit_efa",
+    "fit_network",
     "gaussian_ml_discrepancy",
     "estimate_parameter_inference",
     "InvarianceResult",
@@ -122,6 +124,8 @@ __all__ = [
     "MeasurementDesign",
     "MLEstimationContext",
     "MLOptimizationResult",
+    "NetworkConfig",
+    "NetworkResult",
     "ParameterBoundsConfig",
     "ModelConstraint",
     "ModelRelation",
