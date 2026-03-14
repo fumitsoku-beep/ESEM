@@ -7,6 +7,8 @@ import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
 
+from ..preprocessing import SUPPORTED_CORRELATION_METHODS, SUPPORTED_MISSING_STRATEGIES
+from ..preprocessing.variable_types import validate_declared_variable_types
 from .extraction import (
     _extract_minres_method,
     _extract_ml_method,
@@ -215,24 +217,13 @@ def _validate_inputs(data: pd.DataFrame, config: EFAConfig) -> None:
     if not (0.0 < config.min_uniqueness < 1.0):
         raise ValueError("`min_uniqueness` must be between 0 and 1.")
     missing_strategy = config.missing_strategy.strip().lower()
-    if missing_strategy not in {"pairwise", "dropna"}:
+    if missing_strategy not in SUPPORTED_MISSING_STRATEGIES:
         raise ValueError("`missing_strategy` must be one of: pairwise, dropna.")
     correlation_method = config.correlation_method.strip().lower()
-    if correlation_method not in {"pearson", "spearman", "polychoric"}:
+    if correlation_method not in SUPPORTED_CORRELATION_METHODS:
         raise ValueError("`correlation_method` must be one of: pearson, spearman, polychoric.")
     if config.variable_types is not None:
-        invalid_names = [name for name in config.variable_types if name not in config.items]
-        if invalid_names:
-            joined = ", ".join(sorted(invalid_names))
-            raise ValueError(f"`variable_types` contains items not present in `items`: {joined}.")
-        invalid_types = [
-            name for name, kind in config.variable_types.items() if kind.strip().lower() not in {"continuous", "ordinal"}
-        ]
-        if invalid_types:
-            joined = ", ".join(sorted(invalid_types))
-            raise ValueError(
-                f"`variable_types` entries must be `continuous` or `ordinal`; invalid entries for: {joined}."
-            )
+        validate_declared_variable_types(tuple(config.items), config.variable_types)
 
     missing = [column for column in config.items if column not in data.columns]
     if missing:

@@ -26,6 +26,10 @@
 
 ## 核心文档
 
+### Shared
+
+- [Shared Preprocessing Module Extraction (ZH)](preprocessing-module-extraction.zh-CN.md)
+
 ### EFA
 
 - [EFA Phase 1 Implementation (ZH)](efa-phase1-implementation.zh-CN.md)
@@ -55,5 +59,6 @@
 ## 建议阅读顺序
 
 1. 如果要看“当前怎么用”，先读 [docs/parameters.zh-CN.md](parameters.zh-CN.md)、[docs/esem-mvp-run.zh-CN.md](esem-mvp-run.zh-CN.md)。
-2. 如果要看“EFA 现在到哪一步”，读 [docs/efa-phase1-implementation.zh-CN.md](efa-phase1-implementation.zh-CN.md) 与 [docs/efa-method-expansion-roadmap.zh-CN.md](efa-method-expansion-roadmap.zh-CN.md)。
-3. 如果要看“SEM / ESEM 接下来怎么推进”，读 [docs/sem-phase-implementation.zh-CN.md](sem-phase-implementation.zh-CN.md) 与 [docs/esem-modular-workflow.zh-CN.md](esem-modular-workflow.zh-CN.md)。
+2. 如果要看“共享预处理层为什么要抽、怎么抽”，先读 [docs/preprocessing-module-extraction.zh-CN.md](preprocessing-module-extraction.zh-CN.md)。
+3. 如果要看“EFA 现在到哪一步”，读 [docs/efa-phase1-implementation.zh-CN.md](efa-phase1-implementation.zh-CN.md) 与 [docs/efa-method-expansion-roadmap.zh-CN.md](efa-method-expansion-roadmap.zh-CN.md)。
+4. 如果要看“SEM / ESEM 接下来怎么推进”，读 [docs/sem-phase-implementation.zh-CN.md](sem-phase-implementation.zh-CN.md) 与 [docs/esem-modular-workflow.zh-CN.md](esem-modular-workflow.zh-CN.md)。

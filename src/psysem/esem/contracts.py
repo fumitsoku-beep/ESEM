@@ -33,6 +33,8 @@ class ESEMWorkflowConfig:
     efa_max_iter: int = 200
     efa_tol: float = 1e-6
     efa_min_uniqueness: float = 0.005
+    efa_missing_strategy: str = "pairwise"
+    efa_correlation_method: str | None = None
 
 
 @dataclass

@@ -6,6 +6,13 @@ import numpy as np
 import pandas as pd
 from scipy.stats import chi2
 
+from ..preprocessing import (
+    AssociationMatrixConfig,
+    build_association_matrix,
+    normalize_correlation_method,
+    normalize_missing_strategy,
+)
+from ..preprocessing.contracts import AssociationMatrixResult
 from .contracts import EFADiagnosticsConfig, EFADiagnosticsResult
 
 
@@ -15,6 +22,9 @@ def run_efa_diagnostics(data: pd.DataFrame, config: EFADiagnosticsConfig) -> EFA
         data=data,
         items=config.items,
         dropna=config.dropna,
+        missing_strategy=config.missing_strategy,
+        correlation_method=config.correlation_method,
+        variable_types=config.variable_types,
     )
     n_items = len(items)
     sample_ratio = float(n_obs / max(n_items, 1))
@@ -42,7 +52,7 @@ def run_efa_diagnostics(data: pd.DataFrame, config: EFADiagnosticsConfig) -> EFA
         bartlett_chi2=bartlett_chi2,
         bartlett_df=bartlett_df,
         bartlett_p=bartlett_p,
-        warnings=tuple(warning_list),
+        warnings=tuple(dict.fromkeys(warning_list)),
         correlation_matrix=pd.DataFrame(corr, index=list(items), columns=list(items)),
     )
 
@@ -52,6 +62,9 @@ def build_efa_correlation_matrix(
     items: Iterable[str],
     *,
     dropna: bool = True,
+    missing_strategy: str | None = None,
+    correlation_method: str | None = None,
+    variable_types: dict[str, str] | None = None,
 ) -> tuple[np.ndarray, tuple[str, ...], int, tuple[str, ...]]:
     """Validate inputs and construct a stabilized item correlation matrix."""
     if not isinstance(data, pd.DataFrame):
@@ -63,26 +76,47 @@ def build_efa_correlation_matrix(
         joined = ", ".join(missing)
         raise ValueError(f"Missing item columns: {joined}.")
 
-    selected = data.loc[:, list(item_names)].apply(pd.to_numeric, errors="coerce")
-    warnings: list[str] = []
-    if dropna:
-        selected = selected.dropna(axis=0, how="any")
-    elif selected.isna().any().any():
+    selected = data.loc[:, list(item_names)]
+    resolved_missing_strategy, strict_missing_check = _resolve_missing_strategy(
+        dropna=dropna,
+        missing_strategy=missing_strategy,
+    )
+    if strict_missing_check and selected.isna().any().any():
         raise ValueError("Missing values detected in selected items. Set `dropna=True` to continue.")
 
-    n_obs = int(selected.shape[0])
+    prepared = build_association_matrix(
+        data,
+        AssociationMatrixConfig(
+            items=item_names,
+            missing_strategy=resolved_missing_strategy,
+            correlation_method=_resolve_correlation_method(correlation_method),
+            variable_types=variable_types,
+            stabilize=True,
+            min_eigenvalue=1e-8,
+            include_pairwise_counts=True,
+        ),
+    )
+    n_obs, n_obs_warnings = _resolve_effective_n_obs(prepared)
     if n_obs < 3:
         raise ValueError("At least 3 complete observations are required for EFA diagnostics.")
 
-    std = selected.std(axis=0, ddof=0)
-    constant_items = [name for name in item_names if float(std[name]) == 0.0]
+    warnings = list(prepared.warnings)
+    warnings.extend(n_obs_warnings)
+    if prepared.stabilization_applied:
+        warnings.append(
+            "Correlation matrix was adjusted before Bartlett test to ensure positive definiteness."
+        )
+    constant_items = [
+        name
+        for name in item_names
+        if selected[name].notna().any() and int(selected[name].dropna().nunique()) <= 1
+    ]
     if constant_items:
         joined = ", ".join(constant_items)
         warnings.append(f"Constant item(s) detected: {joined}.")
 
-    corr_df = selected.corr()
-    corr = _stabilize_correlation(corr_df.to_numpy(dtype=float))
-    return corr, item_names, n_obs, tuple(warnings)
+    corr = prepared.matrix.to_numpy(dtype=float)
+    return corr, item_names, n_obs, tuple(dict.fromkeys(warnings))
 
 
 def _normalize_items(items: Iterable[str]) -> tuple[str, ...]:
@@ -101,6 +135,49 @@ def _stabilize_correlation(corr: np.ndarray) -> np.ndarray:
     corr = (corr + corr.T) / 2.0
     np.fill_diagonal(corr, 1.0)
     return corr
+
+
+def _resolve_missing_strategy(
+    *,
+    dropna: bool,
+    missing_strategy: str | None,
+) -> tuple[str, bool]:
+    if missing_strategy is not None:
+        return normalize_missing_strategy(missing_strategy), False
+    return ("dropna" if dropna else "pairwise"), not dropna
+
+
+def _resolve_correlation_method(correlation_method: str | None) -> str:
+    if correlation_method is None:
+        return "pearson"
+    return normalize_correlation_method(correlation_method)
+
+
+def _resolve_effective_n_obs(
+    prepared: AssociationMatrixResult,
+) -> tuple[int, tuple[str, ...]]:
+    if prepared.missing_strategy == "dropna":
+        return int(prepared.n_complete_rows or 0), ()
+
+    pairwise_n = prepared.pairwise_n
+    if pairwise_n is None:
+        return int(prepared.n_complete_rows or 0), ()
+
+    counts = pairwise_n.to_numpy(dtype=int)
+    if counts.shape[0] == 1:
+        return int(counts[0, 0]), ()
+
+    off_diag = counts[np.triu_indices_from(counts, k=1)]
+    positive = off_diag[off_diag > 0]
+    n_obs = int(np.min(positive)) if positive.size else int(np.min(np.diag(counts)))
+
+    warnings: list[str] = []
+    if np.unique(off_diag).size > 1:
+        warnings.append(
+            "Pairwise missing strategy produced varying pairwise sample sizes; "
+            "EFA diagnostics use the minimum pairwise count as effective n_obs."
+        )
+    return n_obs, tuple(warnings)
 
 
 def _compute_kmo(corr: np.ndarray) -> tuple[float, np.ndarray]:

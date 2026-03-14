@@ -9,6 +9,12 @@ from ..core import SEMModel
 from ..data import ESEMSpec, esem_spec_from_dict, validate_esem_spec
 from ..efa import EFAConfig, EFAResult, fit_efa
 from ..model import model_spec_from_esem_spec
+from ..preprocessing import (
+    SUPPORTED_CORRELATION_METHODS,
+    SUPPORTED_MISSING_STRATEGIES,
+    normalize_correlation_method,
+    normalize_missing_strategy,
+)
 from ..result import SEMResult
 from .contracts import (
     ESEMCandidateResult,
@@ -148,6 +154,15 @@ def _run_block_efa_bridge(
     results: dict[str, EFAResult] = {}
     warnings: list[str] = []
     for block in spec.blocks:
+        block_variable_types = {
+            item: spec.variable_types[item]
+            for item in block.items
+            if item in spec.variable_types
+        }
+        correlation_method = _resolve_block_efa_correlation_method(
+            block_variable_types=block_variable_types,
+            configured_method=config.efa_correlation_method,
+        )
         efa_result = fit_efa(
             data,
             EFAConfig(
@@ -158,6 +173,9 @@ def _run_block_efa_bridge(
                 max_iter=config.efa_max_iter,
                 tol=config.efa_tol,
                 min_uniqueness=config.efa_min_uniqueness,
+                missing_strategy=normalize_missing_strategy(config.efa_missing_strategy),
+                correlation_method=correlation_method,
+                variable_types=block_variable_types,
             ),
         )
         results[block.name] = efa_result
@@ -349,12 +367,37 @@ def _validate_config(config: ESEMWorkflowConfig) -> None:
         raise ValueError("`efa_tol` must be > 0.")
     if not (0.0 < config.efa_min_uniqueness < 1.0):
         raise ValueError("`efa_min_uniqueness` must be between 0 and 1.")
+    missing_strategy = normalize_missing_strategy(config.efa_missing_strategy)
+    if missing_strategy not in SUPPORTED_MISSING_STRATEGIES:
+        raise ValueError("`efa_missing_strategy` must be one of: pairwise, dropna.")
+    if config.efa_correlation_method is not None:
+        correlation_method = normalize_correlation_method(config.efa_correlation_method)
+        if correlation_method not in SUPPORTED_CORRELATION_METHODS:
+            raise ValueError(
+                "`efa_correlation_method` must be one of: pearson, spearman, polychoric."
+            )
     if config.judge_weights is not None:
         for name, value in config.judge_weights.items():
             if name not in _SUPPORTED_JUDGES:
                 raise ValueError(f"Unknown judge weight key `{name}`.")
             if float(value) <= 0:
                 raise ValueError(f"Judge weight for `{name}` must be > 0.")
+
+
+def _resolve_block_efa_correlation_method(
+    *,
+    block_variable_types: dict[str, str],
+    configured_method: str | None,
+) -> str:
+    if configured_method is not None:
+        return normalize_correlation_method(configured_method)
+
+    block_types = {kind.strip().lower() for kind in block_variable_types.values()}
+    if block_types and block_types == {"ordinal"}:
+        return "polychoric"
+    if "ordinal" in block_types:
+        return "spearman"
+    return "pearson"
 
 
 def _candidate_to_row(candidate: ESEMCandidateResult) -> dict[str, Any]:

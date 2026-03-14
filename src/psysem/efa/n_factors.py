@@ -6,6 +6,7 @@ from typing import Iterable
 import numpy as np
 import pandas as pd
 
+from ..preprocessing import normalize_correlation_method
 from .contracts import FactorSelectionConfig, FactorSelectionResult
 from .diagnostics import build_efa_correlation_matrix
 
@@ -29,6 +30,9 @@ def suggest_n_factors(data: pd.DataFrame, config: FactorSelectionConfig) -> Fact
         data=data,
         items=config.items,
         dropna=config.dropna,
+        missing_strategy=config.missing_strategy,
+        correlation_method=config.correlation_method,
+        variable_types=config.variable_types,
     )
     n_items = len(items)
     n_min, n_max = _resolve_factor_range(config, n_items=n_items)
@@ -37,6 +41,11 @@ def suggest_n_factors(data: pd.DataFrame, config: FactorSelectionConfig) -> Fact
     eigenvalues = _sorted_eigenvalues(corr)
     suggestions: dict[str, int] = {}
     warning_list = list(warnings)
+    if _resolve_correlation_method(config.correlation_method) == "polychoric" and config.enable_pa:
+        warning_list.append(
+            "Parallel analysis currently uses Gaussian random-data thresholds even when "
+            "`correlation_method='polychoric'`; interpret PA conservatively."
+        )
 
     scree_elbow: int | None = None
     if config.enable_scree:
@@ -263,6 +272,12 @@ def _aggregate_consensus(
 
 def _clip_n_factors(value: int, *, n_min: int, n_max: int) -> int:
     return int(min(max(value, n_min), n_max))
+
+
+def _resolve_correlation_method(correlation_method: str | None) -> str:
+    if correlation_method is None:
+        return "pearson"
+    return normalize_correlation_method(correlation_method)
 
 
 def _stabilize_correlation(corr: np.ndarray) -> np.ndarray:

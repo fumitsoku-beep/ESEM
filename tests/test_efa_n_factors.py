@@ -23,6 +23,15 @@ def _synthetic_efa_data(n: int = 600, seed: int = 7) -> pd.DataFrame:
     return pd.DataFrame(observed, columns=[f"i{i}" for i in range(1, 7)])
 
 
+def _ordinal_efa_data(n: int = 600, seed: int = 7) -> pd.DataFrame:
+    continuous = _synthetic_efa_data(n=n, seed=seed)
+    ordinal = {
+        column: pd.qcut(continuous[column], q=5, labels=False, duplicates="drop") + 1
+        for column in continuous.columns
+    }
+    return pd.DataFrame(ordinal)
+
+
 def _strict_map_values(corr: np.ndarray, n_max: int) -> np.ndarray:
     eigvals, eigvecs = np.linalg.eigh(corr)
     order = np.argsort(eigvals)[::-1]
@@ -103,6 +112,22 @@ def test_suggest_n_factors_only_kaiser() -> None:
     )
     result = suggest_n_factors(data, config)
     assert set(result.suggestions_by_method) == {"kaiser"}
+
+
+def test_suggest_n_factors_accepts_polychoric_correlation_method() -> None:
+    data = _ordinal_efa_data()
+    variable_types = {column: "ordinal" for column in data.columns}
+    config = FactorSelectionConfig(
+        items=("i1", "i2", "i3", "i4", "i5", "i6"),
+        n_min=1,
+        n_max=4,
+        enable_pa=False,
+        correlation_method="polychoric",
+        variable_types=variable_types,
+    )
+    result = suggest_n_factors(data, config)
+    assert result.correlation_matrix.shape == (6, 6)
+    assert any("polychoric" in msg.lower() for msg in result.warnings)
 
 
 def test_suggest_n_factors_weighted_vote_respects_method_weights() -> None:

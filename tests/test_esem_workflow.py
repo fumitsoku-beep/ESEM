@@ -28,6 +28,15 @@ def _make_demo_data(n_obs: int = 360, seed: int = 123) -> pd.DataFrame:
     return pd.DataFrame(observed, columns=columns)
 
 
+def _make_demo_ordinal_data(n_obs: int = 360, seed: int = 123) -> pd.DataFrame:
+    continuous = _make_demo_data(n_obs=n_obs, seed=seed)
+    ordinal = {
+        column: pd.qcut(continuous[column], q=5, labels=False, duplicates="drop") + 1
+        for column in continuous.columns
+    }
+    return pd.DataFrame(ordinal)
+
+
 def _spec_payload(estimator: str = "ML") -> dict[str, object]:
     items = [f"i{i}" for i in range(1, 7)]
     return {
@@ -103,3 +112,19 @@ def test_run_esem_workflow_rejects_unknown_generator() -> None:
             _spec_payload(),
             ESEMWorkflowConfig(generator_strategies=("unknown",)),
         )
+
+
+def test_run_esem_workflow_ordinal_block_bridge_uses_polychoric() -> None:
+    data = _make_demo_ordinal_data()
+    payload = _spec_payload()
+    payload["variable_types"] = {f"i{i}": "ordinal" for i in range(1, 7)}
+    result = run_esem_workflow(
+        data,
+        payload,
+        ESEMWorkflowConfig(
+            include_sem_fit=False,
+            enabled_judges=("efa_bridge",),
+        ),
+    )
+    efa_result = result.best_candidate.block_efa_results["internalizing"]
+    assert any("polychoric" in msg.lower() for msg in efa_result.warnings)

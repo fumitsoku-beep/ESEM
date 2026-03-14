@@ -1,10 +1,10 @@
 import numpy as np
 import pandas as pd
 import pytest
-from scipy.stats import norm
 
 from psysem import EFAConfig
 from psysem.efa.input_matrix import build_efa_input_matrix
+from psysem.preprocessing import AssociationMatrixConfig, build_association_matrix
 
 
 def _ordinal_likert_data(n: int = 1500, seed: int = 123) -> pd.DataFrame:
@@ -192,3 +192,26 @@ def test_build_efa_input_matrix_stabilizes_non_finite_entries() -> None:
     assert np.all(np.isfinite(prepared.corr))
     assert np.allclose(prepared.corr, prepared.corr.T)
     assert np.allclose(np.diag(prepared.corr), 1.0)
+
+
+def test_build_efa_input_matrix_matches_shared_preprocessing_output() -> None:
+    data = _ordinal_likert_data()
+    config = EFAConfig(
+        items=("i1", "i2", "i3"),
+        n_factors=1,
+        correlation_method="polychoric",
+    )
+
+    efa_prepared = build_efa_input_matrix(data, config)
+    shared_prepared = build_association_matrix(
+        data,
+        AssociationMatrixConfig(
+            items=("i1", "i2", "i3"),
+            correlation_method="polychoric",
+            include_pairwise_counts=False,
+        ),
+    )
+
+    assert np.allclose(efa_prepared.corr, shared_prepared.matrix.to_numpy(dtype=float))
+    assert efa_prepared.item_names == shared_prepared.item_names
+    assert efa_prepared.warnings == shared_prepared.warnings

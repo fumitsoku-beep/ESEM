@@ -80,6 +80,19 @@ def test_run_efa_diagnostics_dropna_false_rejects_missing_values() -> None:
         run_efa_diagnostics(data, config)
 
 
+def test_run_efa_diagnostics_accepts_explicit_pairwise_missing_strategy() -> None:
+    data = _synthetic_efa_data()
+    data.loc[0, "i1"] = np.nan
+    config = EFADiagnosticsConfig(
+        items=("i1", "i2", "i3", "i4", "i5", "i6"),
+        dropna=False,
+        missing_strategy="pairwise",
+    )
+    result = run_efa_diagnostics(data, config)
+    assert result.n_obs == 399
+    assert any("pairwise" in msg.lower() for msg in result.warnings)
+
+
 def test_run_efa_diagnostics_warns_for_constant_item() -> None:
     data = _synthetic_efa_data()
     data["i6"] = 1.0

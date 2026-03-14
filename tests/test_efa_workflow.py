@@ -30,6 +30,15 @@ def _synthetic_efa_data(n: int = 500, seed: int = 99) -> pd.DataFrame:
     return pd.DataFrame(observed, columns=[f"i{i}" for i in range(1, 7)])
 
 
+def _ordinal_efa_data(n: int = 500, seed: int = 99) -> pd.DataFrame:
+    continuous = _synthetic_efa_data(n=n, seed=seed)
+    ordinal = {
+        column: pd.qcut(continuous[column], q=5, labels=False, duplicates="drop") + 1
+        for column in continuous.columns
+    }
+    return pd.DataFrame(ordinal)
+
+
 def test_run_efa_workflow_selection_union_smoke() -> None:
     data = _synthetic_efa_data()
     config = EFAWorkflowConfig(
@@ -143,6 +152,38 @@ def test_run_efa_workflow_rejects_selection_items_mismatch() -> None:
     )
     with pytest.raises(ValueError, match="selection.items"):
         run_efa_workflow(data, config)
+
+
+def test_run_efa_workflow_rejects_inconsistent_preprocessing_between_subconfigs() -> None:
+    data = _synthetic_efa_data()
+    config = EFAWorkflowConfig(
+        items=("i1", "i2", "i3", "i4", "i5", "i6"),
+        diagnostics=EFADiagnosticsConfig(items=(), missing_strategy="dropna"),
+        selection=FactorSelectionConfig(items=(), n_min=1, n_max=3, missing_strategy="pairwise"),
+        evaluation=EFAEvaluationConfig(),
+    )
+    with pytest.raises(ValueError, match="Workflow preprocessing is inconsistent"):
+        run_efa_workflow(data, config)
+
+
+def test_run_efa_workflow_top_level_preprocessing_propagates() -> None:
+    data = _ordinal_efa_data()
+    variable_types = {column: "ordinal" for column in data.columns}
+    result = run_efa_workflow(
+        data,
+        EFAWorkflowConfig(
+            items=("i1", "i2", "i3", "i4", "i5", "i6"),
+            diagnostics=EFADiagnosticsConfig(items=()),
+            selection=FactorSelectionConfig(items=(), n_min=1, n_max=3, enable_pa=False),
+            evaluation=EFAEvaluationConfig(),
+            missing_strategy="pairwise",
+            correlation_method="polychoric",
+            variable_types=variable_types,
+        ),
+    )
+    assert any("polychoric" in msg.lower() for msg in result.diagnostics.warnings)
+    assert any("polychoric" in msg.lower() for msg in result.selection.warnings)
+    assert any("polychoric" in msg.lower() for msg in result.best_model.warnings)
 
 
 def test_run_efa_workflow_best_interpretation_matches_best_model() -> None:

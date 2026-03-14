@@ -14,6 +14,9 @@ class EFADiagnosticsConfig:
     items: tuple[str, ...]
     dropna: bool = True
     min_sample_ratio: float = 5.0
+    missing_strategy: str | None = None
+    correlation_method: str | None = None
+    variable_types: dict[str, str] | None = None
 
 
 @dataclass
@@ -47,6 +50,9 @@ class FactorSelectionConfig:
     dropna: bool = True
     consensus_strategy: str = "majority_min_tie"
     consensus_weights: dict[str, float] | None = None
+    missing_strategy: str | None = None
+    correlation_method: str | None = None
+    variable_types: dict[str, str] | None = None
 
 
 @dataclass
@@ -128,6 +134,9 @@ class EFAWorkflowConfig:
     include_consensus: bool = True
     manual_candidates: tuple[int, ...] = ()
     include_interpretation: bool = True
+    missing_strategy: str | None = None
+    correlation_method: str | None = None
+    variable_types: dict[str, str] | None = None
 
 
 @dataclass
