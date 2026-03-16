@@ -6,6 +6,25 @@ The format is inspired by Keep a Changelog, and this project currently uses pre-
 
 ## [Unreleased]
 
+## [0.1.0a1] - 2026-03-16
+
+### Changed
+- 明确 `psysem.sem.*` 为 SEM 子系统的唯一直接模块入口。
+- 顶层 `psysem` 继续保留稳定 public API re-export。
+- ESEM 相关实现已改为依赖新的 `psysem.sem.*` 路径。
+- 多份文档已更新为“迁移完成后的当前状态”表述。
+
+### Removed
+- 删除旧的根层 SEM shim 文件：`core.py`、`model.py`、`fit_indices.py`、`result.py`、`reporting.py`、`parameter_index.py`。
+- 删除旧的包级 SEM shim 目录内容：`estimation/`、`inference/`、`measurement/`、`structural/` 下的兼容实现。
+
+### Fixed
+- 修复 `esem` 子系统中对旧 SEM 路径的残留依赖。
+- 修复测试与说明文档中对旧导入路径的引用。
+
+### Validation
+- 全量测试通过：`193 passed`。
+
 ### Added
 - Initial runnable ESEM MVP workflow entry: `run_esem_workflow(...)`.
 - New `psysem.esem` module contracts for workflow/candidate/judge results.

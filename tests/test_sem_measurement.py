@@ -132,7 +132,7 @@ def test_build_measurement_design_tracks_block_latent_pairs() -> None:
         "internalizing_f1 =~ i1 + i2 + i3\n"
         "externalizing_f1 =~ e1 + e2 + e3"
     )
-    from psysem.model import ModelSpec
+    from psysem.sem.model import ModelSpec
 
     spec_with_blocks = ModelSpec(
         source=spec.source,

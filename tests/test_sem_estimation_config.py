@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-import psysem.estimation.ml as ml_module
+from psysem.sem.estimation import ml as ml_module
 from psysem import (
     ParameterBoundsConfig,
     SEMFitConfig,

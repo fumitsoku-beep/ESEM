@@ -22,7 +22,7 @@
 - 提取方法：`paf`、`pca`、`minres`、`ml`
 - 旋转方法：`none`、`varimax`、`promax`、`oblimin`、`geomin`、`target`
 
-见 [src/psysem/efa/fit.py](../src/psysem/efa/fit.py#L213-L216)。
+见 `src/psysem/efa/fit.py`。
 
 ### 1.2 因子数建议
 
@@ -33,7 +33,7 @@
 - `Kaiser`
 - `Scree`
 
-见 [src/psysem/efa/contracts.py](../src/psysem/efa/contracts.py#L36-L49)。
+见 `src/psysem/efa/contracts.py`。
 
 ### 1.3 当前限制
 

@@ -41,7 +41,7 @@ def test_build_structural_design_warns_cycle() -> None:
 
 def test_build_structural_design_rejects_unknown_target_if_modelspec_inconsistent() -> None:
     spec = parse_model("eta =~ x1 + x2 + x3\ny ~ eta")
-    from psysem.model import ModelSpec
+    from psysem.sem.model import ModelSpec
 
     broken = ModelSpec(
         source=spec.source,

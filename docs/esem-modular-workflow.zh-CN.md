@@ -25,7 +25,7 @@
 1. 用户提供 `blocks`；
 2. 每个 `block` 自动展开成 `block_f1`, `block_f2`, ...；
 3. 每个因子默认连接该 `block` 内全部题项；
-4. 再叠加 `structural` 路径，统一进入 `ModelSpec`。[src/psysem/model.py](../src/psysem/model.py#L101-L138)
+4. 再叠加 `structural` 路径，统一进入 `ModelSpec`，相关实现见 `src/psysem/sem/model.py`。
 
 这种做法的优点是简单、稳定、适合自动化；缺点是判断路径单一，缺少“多种候选结构 + 多种判断规则 + 自动选择”的灵活性。
 
@@ -64,10 +64,10 @@
 
 因为它最符合当前仓库已有实现：
 
-1. 已有 `ESEMSpec -> ModelSpec` 的 block 展开入口；[src/psysem/model.py](../src/psysem/model.py#L101-L138)
-2. 已有完整 `EFA` 诊断、因子数建议、候选比较工作流；[src/psysem/efa/workflow.py](../src/psysem/efa/workflow.py#L18-L69)
-3. 已有 measurement/structural/ML/inference/fit-indices 基础闭环；[src/psysem/measurement/builder.py](../src/psysem/measurement/builder.py#L12-L197) [src/psysem/structural/builder.py](../src/psysem/structural/builder.py#L12-L114) [src/psysem/estimation/ml.py](../src/psysem/estimation/ml.py#L164-L255)
-4. 已有 EFA 中的“多方法建议 + 共识聚合”实践经验；[src/psysem/efa/n_factors.py](../src/psysem/efa/n_factors.py#L26-L79)
+1. 已有 `ESEMSpec -> ModelSpec` 的 block 展开入口，相关实现见 `src/psysem/sem/model.py`；
+2. 已有完整 `EFA` 诊断、因子数建议、候选比较工作流，相关实现见 `src/psysem/efa/workflow.py`；
+3. 已有 measurement/structural/ML/inference/fit-indices 基础闭环，相关实现见 `src/psysem/sem/measurement/builder.py`、`src/psysem/sem/structural/builder.py`、`src/psysem/sem/estimation/ml.py`；
+4. 已有 EFA 中的“多方法建议 + 共识聚合”实践经验，相关实现见 `src/psysem/efa/n_factors.py`。
 
 也就是说，这个方案不是另起炉灶，而是把现有模块重新编排。
 
@@ -282,7 +282,7 @@ src/psysem/
 
 ### 目标
 
-让 ESEM 候选结构生成方式可注册、可扩展，复用 EFA 中的注册式风格。[src/psysem/efa/fit.py](../src/psysem/efa/fit.py#L117-L139)
+让 ESEM 候选结构生成方式可注册、可扩展，复用 EFA 中的注册式风格，相关实现见 `src/psysem/efa/fit.py`。
 
 ### 实现内容
 
@@ -322,7 +322,7 @@ def generator(data, spec, workflow_config) -> list[ModelSpec]:
 
 ### 实现内容
 
-逻辑来源直接复用当前 `model_spec_from_esem_spec(...)`：[src/psysem/model.py](../src/psysem/model.py#L101-L138)
+逻辑来源直接复用当前 `model_spec_from_esem_spec(...)`，相关实现见 `src/psysem/sem/model.py`。
 
 执行步骤：
 
@@ -354,7 +354,7 @@ def generator(data, spec, workflow_config) -> list[ModelSpec]:
 
 对每个 block：
 
-1. 调用现有 `run_efa_workflow(...)` 或 `fit_efa(...)`；[src/psysem/efa/workflow.py](../src/psysem/efa/workflow.py#L18-L69)
+1. 调用现有 `run_efa_workflow(...)` 或 `fit_efa(...)`，相关实现见 `src/psysem/efa/workflow.py`；
 2. 读取最佳因子数 `best_n_factors`；
 3. 根据载荷矩阵识别每题主因子；
 4. 对高于阈值的交叉载荷保留自由参数；
@@ -490,9 +490,9 @@ def judge(candidate_result, workflow_config) -> ESEMJudgeResult:
 
 执行顺序：
 
-1. 从候选 `ModelSpec` 构建 measurement design；[src/psysem/measurement/builder.py](../src/psysem/measurement/builder.py#L12-L197)
-2. 调用 `check_measurement_identification(...)`；[src/psysem/measurement/identification.py](../src/psysem/measurement/identification.py#L6-L29)
-3. 如有 structural，则调用 `check_structural_validity(...)`；[src/psysem/structural/validation.py](../src/psysem/structural/validation.py#L6-L24)
+1. 从候选 `ModelSpec` 构建 measurement design，相关实现见 `src/psysem/sem/measurement/builder.py`；
+2. 调用 `check_measurement_identification(...)`，相关实现见 `src/psysem/sem/measurement/identification.py`；
+3. 如有 structural，则调用 `check_structural_validity(...)`，相关实现见 `src/psysem/sem/structural/validation.py`；
 4. 根据 warning 数量和严重度给出 `passed/score`。
 
 ### 评分建议
@@ -580,7 +580,7 @@ $$
 
 1. `min_h2 = 0.20`
 
-这个思路与现有 EFA 评价模块一致。[src/psysem/efa/evaluation.py](../src/psysem/efa/evaluation.py#L8-L54)
+这个思路与现有 EFA 评价模块一致，相关实现见 `src/psysem/efa/evaluation.py`。
 
 ### 落地文件
 
@@ -604,8 +604,8 @@ $$
 
 复用现有：
 
-1. `SEMModel.fit(...)`；[src/psysem/core.py](../src/psysem/core.py#L33-L226)
-2. `compute_fit_indices(...)`；[src/psysem/fit_indices.py](../src/psysem/fit_indices.py#L48-L167)
+1. `SEMModel.fit(...)`，相关实现见 `src/psysem/sem/core.py`；
+2. `compute_fit_indices(...)`，相关实现见 `src/psysem/sem/fit_indices.py`；
 
 判断规则示例：
 
@@ -864,7 +864,7 @@ print(workflow.best_candidate.sem_result.summary())
 3. 候选比较和自动选择；
 4. EFA 桥接；
 
-那么继续把逻辑塞进 [src/psysem/model.py](../src/psysem/model.py#L101-L138) 会很快失控。
+那么继续把逻辑塞进 `src/psysem/sem/model.py` 会很快失控。
 
 更合理的做法是：
 

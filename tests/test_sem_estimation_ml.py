@@ -195,6 +195,8 @@ def test_sem_model_fit_runs_ml_optimizer_on_sufficient_sample_size() -> None:
     assert "ml_optimization_success" in result.optimization_info
     assert "ml_n_optimized_observed" in result.optimization_info
     assert "n_inference_parameters" in result.optimization_info
+    assert "inference_status" in result.optimization_info
+    assert "inference_covariance_method" in result.optimization_info
     assert result.parameter_inference
     assert set(result.fit_indices) == {"cfi", "tli", "rmsea", "srmr", "aic", "bic"}
 
@@ -214,5 +216,8 @@ def test_estimate_parameter_inference_handles_failed_hessian() -> None:
         parameter_index_map=index_map,
     )
     assert len(result.entries) == 1
+    assert result.status == "failed"
+    assert result.failure_reason == "numerical_hessian_failed"
+    assert result.n_without_standard_error == 1
     assert result.entries[0].standard_error is None
     assert any("Numerical Hessian failed" in warning for warning in result.warnings)

@@ -24,6 +24,12 @@
 - `MLR/WLSMV` 在 SEM 估计层面仍是后续里程碑（当前主原型路径是 ML）。
 - 多组不变性 API 仍是占位接口，尚未提供完整可用实现。
 
+## SEM 模块路径说明
+
+- 顶层公共 API 继续使用 `from psysem import ...`。
+- 如果需要直接导入 SEM 子系统实现，请使用 `psysem.sem.*`。
+- 旧的 `psysem.core`、`psysem.model`、`psysem.fit_indices`、`psysem.estimation` 等兼容路径已移除，不再作为文档承诺面。
+
 ---
 
 ## 快速安装

@@ -81,6 +81,12 @@ spec = {
 - 新增：EFA workflow 与 ESEM block bridge 已复用共享 preprocessing，并能根据 block 类型自动选择相关矩阵策略
 - 下一步：`network` MVP、多候选 generator/judge/selector、更完整 ordinal/稳健估计路径
 
+## SEM 路径说明
+
+- 顶层公共 API 继续建议使用 `from psysem import ...`。
+- 如需直接导入 SEM 子系统实现，请使用 `psysem.sem.*`。
+- 旧的 `psysem.core`、`psysem.model`、`psysem.fit_indices`、`psysem.estimation` 等兼容导入路径已删除，不再作为当前版本支持面。
+
 ## 当前 EFA `target rotation` 说明
 
 当使用 `rotation="target"` 时，当前版本支持：

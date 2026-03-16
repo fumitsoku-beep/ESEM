@@ -1,5 +1,4 @@
 from ._version import __version__
-from .core import SEMModel, sem
 from .data import (
     ESEMBlockSpec,
     ESEMSpec,
@@ -32,7 +31,16 @@ from .efa import (
     run_efa_workflow,
     suggest_n_factors,
 )
-from .estimation import (
+from .esem import (
+    ESEMCandidateResult,
+    ESEMJudgeResult,
+    ESEMWorkflowConfig,
+    ESEMWorkflowResult,
+    run_esem_workflow,
+)
+from .invariance import InvarianceResult, test_measurement_invariance
+from .sem.core import SEMModel, sem
+from .sem.estimation import (
     MLEstimationContext,
     MLOptimizationResult,
     ParameterBoundsConfig,
@@ -44,23 +52,15 @@ from .estimation import (
     optimize_ml_parameters,
     parameter_vector_to_named_values,
 )
-from .esem import (
-    ESEMCandidateResult,
-    ESEMJudgeResult,
-    ESEMWorkflowConfig,
-    ESEMWorkflowResult,
-    run_esem_workflow,
-)
-from .fit_indices import compute_basic_fit_indices
-from .inference import InferenceResult, ParameterInferenceEntry, estimate_parameter_inference
-from .invariance import InvarianceResult, test_measurement_invariance
-from .measurement import (
+from .sem.fit_indices import compute_basic_fit_indices
+from .sem.inference import InferenceResult, ParameterInferenceEntry, estimate_parameter_inference
+from .sem.measurement import (
     LoadingParameter,
     MeasurementDesign,
     build_measurement_design,
     check_measurement_identification,
 )
-from .model import (
+from .sem.model import (
     ModelConstraint,
     ModelRelation,
     ModelSpec,
@@ -69,17 +69,16 @@ from .model import (
     model_spec_from_esem_spec,
     parse_model,
 )
-from .parameter_index import ParameterIndexEntry, ParameterIndexMap, build_parameter_index_map
-from .reporting import to_markdown
-from .result import SEMResult
-from .structural import (
+from .sem.parameter_index import ParameterIndexEntry, ParameterIndexMap, build_parameter_index_map
+from .sem.reporting import to_markdown
+from .sem.result import SEMResult
+from .sem.structural import (
     StructuralDesign,
     StructuralDisturbance,
     StructuralPath,
     build_structural_design,
     check_structural_validity,
 )
-
 __all__ = [
     "__version__",
     "compute_basic_fit_indices",

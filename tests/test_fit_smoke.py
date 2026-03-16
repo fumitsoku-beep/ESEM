@@ -147,6 +147,45 @@ def test_summary_and_markdown_include_phase1_fields() -> None:
     assert "## Optimization" in report
 
 
+def test_summary_and_markdown_show_inference_summary_when_available() -> None:
+    data = pd.DataFrame(
+        {
+            "x1": [1.0, 2.0, 3.0, 4.0, 5.0],
+            "x2": [1.1, 2.1, 3.1, 4.1, 5.1],
+            "x3": [0.9, 1.9, 2.9, 3.9, 4.9],
+        }
+    )
+    result = SEMModel("eta =~ x1 + x2 + x3").fit(data)
+    summary = result.summary()
+    report = to_markdown(result)
+
+    if result.parameter_inference:
+        assert "Inference rows:" in summary
+        assert "Inference status:" in summary
+        assert "Inference rows:" in report
+        assert "Inference status:" in report
+
+
+def test_summary_and_markdown_show_fit_summary_when_available() -> None:
+    data = pd.DataFrame(
+        {
+            "x1": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+            "x2": [1.1, 2.1, 3.1, 4.1, 5.1, 6.1],
+            "x3": [0.9, 1.9, 2.9, 3.9, 4.9, 5.9],
+            "x4": [1.2, 2.2, 3.2, 4.2, 5.2, 6.2],
+        }
+    )
+    result = SEMModel("eta =~ x1 + x2 + x3 + x4").fit(data)
+    summary = result.summary()
+    report = to_markdown(result)
+
+    if "fit_status" in result.optimization_info:
+        assert "Fit status:" in summary
+        assert "Fit indices availability:" in summary
+        assert "Fit status:" in report
+        assert "Fit indices availability:" in report
+
+
 def test_fit_builds_parameter_table_and_parameter_placeholders() -> None:
     data = pd.DataFrame(
         {
