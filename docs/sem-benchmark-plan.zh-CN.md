@@ -344,7 +344,12 @@ y6 ~~ y8
 
 ### 5.2 推荐场景
 
-建议先从下面 3 类场景中选 1-2 个落地：
+当前首版已落地的边界场景包括：
+
+1. `df = 0` / just-identified 场景下的 `partial` fit status 与 fit-index 不可用语义；
+2. 小样本触发 `ML optimization skipped` 的 warning / summary / markdown 语义。
+
+后续仍建议继续补下面场景：
 
 #### Case A：自由度过低
 
@@ -488,16 +493,149 @@ y6 ~~ y8
 1. `HolzingerSwineford1939`：原始 CSV + provenance JSON + 首版自动 benchmark 测试已完成；
 2. `PoliticalDemocracy`：原始 CSV + provenance JSON + 首版自动 benchmark 测试已完成；
 3. `Boundary cases`：首版 warning / failure benchmark 已完成；
-4. 三组 benchmark 目前都仍处于 **prototype benchmark** 阶段：
-   - 已覆盖 Level A / Level B；
-   - 只有部分场景进入 Level C 的直接数值对照；
-   - 更严格的参数级对照与 residual covariance 对照仍待下一步补强。
+4. `HolzingerSwineford1939` 已开始进入“更完整的参数级 benchmark”阶段：
+   - 已对齐 fixed-marker benchmark 语法；
+   - 已扩展到更多 loading 与 observed residual variance 的 Level C 对照；
+   - latent variance / covariance 已进入正式自动 benchmark 断言。
+5. `PoliticalDemocracy` 也已开始进入“更严格参数级 benchmark”阶段：
+   - 已对齐 fixed-marker benchmark 语法；
+   - 已扩展到 selected loadings、structural regressions 与 selected residual variance 的对照；
+   - residual covariance 已真正进入 implied covariance 主路径，并已升级为正式自动数值断言；
+   - 当前剩余待补强重点已转向更严格容差、latent covariance 对照与参考值生成流程固定。
 
-边界 benchmark 可以放到第二批。
+需要特别说明：当前与 `lavaan` 之间剩余的差距，主要不是“方法公式错误”，而是“实现仍偏 prototype-level”。更具体地说：
+
+1. 优化起点、restart、bounds 与数值稳定化策略还比较简单；
+2. fit indices 的 baseline/null model、边界处理与稳定化细节尚未完全对齐；
+3. inference 仍主要依赖数值 Hessian，因此 `SE / z / p` 的稳定性还不适合过早强收紧；
+4. benchmark 当前已进入部分 Level C，但离全参数严格回归仍有一段工程化收敛过程。
+
+边界 benchmark 的“首版”已经不再属于待办；下一步重点不再是“有没有边界 benchmark”，而是“是否继续扩充边界覆盖范围”。
 
 ---
 
-## 10. 一句话结论
+## 10. 接下来必须继续做什么（明确执行版）
+
+如果下一阶段目标是把当前 SEM 从“可运行、结果不离谱”推进到“有更强数值可信度”，那么后续应按下面顺序继续。
+
+### 10.1 第一优先级：补全 `HolzingerSwineford1939` 的黄金参考值
+
+目标：把当前“部分参考”升级成“可做更严格 Level C 对照”的完整参考。
+
+当前状态：**已启动第一轮升级**。
+
+补充说明：`HS1939` 当前已不再只覆盖 loading 与 observed residual variance，latent variance / covariance 也已进入正式自动断言。
+
+需要继续补入到 `tests/data/benchmark_hs1939_reference.json` 的内容：
+
+1. 全部 measurement loadings；
+2. 三个 latent covariance；
+3. 9 个 residual variance；
+4. 如可稳定获取，再加入 selected `SE / z / p`；
+5. 更明确的参数对齐规则与容差说明。
+
+完成标准：
+
+1. 不再只比较少数几个 loading；
+2. 可以按参数语义逐项比较主要 CFA 参数；
+3. 测试不依赖人工肉眼判断。
+
+### 10.2 第二优先级：把 `tests/test_sem_benchmark_hs1939.py` 升级成更严格的 Level C
+
+目标：让 HS1939 成为当前仓库里第一组真正可用于数值回归的 SEM benchmark。
+
+当前状态：**已启动第一轮升级**，目前已覆盖更多非 marker loading、全部 observed residual variance、latent variance / covariance，以及更明确的 fixed-marker benchmark 语法。
+
+需要新增的断言：
+
+1. 全部主要 loading 的逐项容差比较；
+2. latent covariance 的逐项容差比较；
+3. residual variance 的逐项容差比较；
+4. `chi_square / cfi / tli / rmsea / srmr` 的更小容差比较。
+
+建议策略：
+
+1. 先保持较宽容差；
+2. 待实现稳定后再收紧；
+3. 不要一次把容差收得过死，避免把 benchmark 变成“只会报错”的脆弱测试。
+
+补充说明：上述 loading / latent covariance / residual variance 对照目前都已经进入可运行的正式自动断言；后续重点主要是继续收紧容差与补更多推断级对照。
+
+### 10.3 第三优先级：补全 `PoliticalDemocracy` 的结构参数参考值
+
+目标：把完整 SEM benchmark 从“方向与区间合理”升级到“结构参数可回归对照”。
+
+当前状态：**已启动第一轮升级**。
+
+需要继续补入到 `tests/data/benchmark_political_democracy_reference.json` 的内容：
+
+1. 全部 measurement loadings；
+2. 关键 structural regressions；
+3. residual covariances；
+4. relevant variances / covariances；
+5. 如可稳定获取，再加入 selected `SE / z / p`。
+
+完成标准：
+
+1. 不再只检查 `dem60 ~ ind60`、`dem65 ~ ind60`、`dem65 ~ dem60` 的方向；
+2. 可以逐项验证关键结构参数与 residual covariance；
+3. fit-profile 不再只是区间断言，而是可进入更严格容差断言。
+
+### 10.4 第四优先级：把 `tests/test_sem_benchmark_political_democracy.py` 升级成更完整数值回归
+
+目标：让当前仓库至少拥有一组 CFA benchmark 和一组完整 SEM benchmark 的数值基线。
+
+当前状态：**已启动第一轮升级**，目前已覆盖 selected loadings、selected regressions、selected residual variances 与更贴近 `lavaan` 的 fixed-marker benchmark 语法。
+
+补充说明：`PoliticalDemocracy` residual covariance 参考值现已不再只是文档记录，而是已经进入正式自动 benchmark 断言。
+
+需要新增的断言：
+
+1. selected regressions 的直接容差比较；
+2. selected residual covariances 的直接容差比较；
+3. 关键 loading 的直接容差比较；
+4. `chi_square / cfi / tli / rmsea / srmr / aic / bic` 的更严格断言。
+
+### 10.5 第五优先级：继续扩展 boundary benchmark，但不要把它当作数值对齐主战场
+
+边界 benchmark 后续仍应继续做，但定位要明确：
+
+1. 它主要验证 `ok / partial / failed`、warning、summary、markdown 语义；
+2. 它不是数值严格对齐的主战场；
+3. 不应要求边界案例像正常 benchmark 一样逐项参数等值。
+
+建议后续补入：
+
+1. 更稳定的 near-singular / Hessian singular 场景；
+2. 更明确的 non-positive-definite covariance 场景；
+3. 必要时补一个 inference `partial` 的固定回归用例。
+
+### 10.6 第六优先级：固定外部参考值生成流程
+
+如果没有稳定的参考值生成流程，后续每次更新 benchmark 都会变成一次人工争论。
+
+因此还需要补一份小型流程说明，至少写清：
+
+1. 使用哪个 `lavaan` 版本；
+2. 使用什么模型语法；
+3. identification / marker 规则是什么；
+4. 参考值如何导出并写入 `reference.json`；
+5. 哪些值是原始参数，哪些是标准化参数。
+
+---
+
+## 11. 不建议现在优先做什么
+
+在完成上面的数值回归补强前，下面这些事情不应排在前面：
+
+1. 继续堆更多新的 benchmark 数据集；
+2. 过早宣传“结果已与成熟 SEM 软件严格一致”；
+3. 先去做过多新的估计器分支，而不先稳住现有 ML 主路径 benchmark；
+4. 把 boundary benchmark 误当成数值对齐工作的替代品。
+
+---
+
+## 12. 一句话结论
 
 如果当前要真正把 `SEM` 从“原型闭环”推进到“可信基线”，那么最值得优先落地的两组 benchmark 是：
 

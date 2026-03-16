@@ -147,11 +147,13 @@ def build_implied_covariance(
 		vector_by_index=vector_by_index,
 		nan_default=1.0,
 	)
-	theta_array = np.diag(np.diag(theta_array))
-	theta_array = np.diag(np.maximum(np.diag(theta_array), 1e-6))
+	theta_array = (theta_array + theta_array.T) / 2.0
+	diag = np.maximum(np.diag(theta_array), 1e-6)
+	np.fill_diagonal(theta_array, diag)
 
 	phi_array, _ = _build_latent_covariance(
 		latent_order=latent_order,
+		measurement_design=measurement_design,
 		structural_design=structural_design,
 		vector_by_index=vector_by_index,
 	)
@@ -549,13 +551,28 @@ def _resolve_matrix(
 def _build_latent_covariance(
 	*,
 	latent_order: tuple[str, ...],
+	measurement_design: MeasurementDesign,
 	structural_design: StructuralDesign | None,
 	vector_by_index: dict[int, float],
 ) -> tuple[np.ndarray, list[str]]:
 	warnings: list[str] = []
 	n_latent = len(latent_order)
-	if structural_design is None or n_latent == 0:
+	if n_latent == 0:
 		return np.eye(n_latent, dtype=float), warnings
+	if structural_design is None:
+		phi_df = measurement_design.phi_matrix.loc[list(latent_order), list(latent_order)]
+		phi_idx_df = measurement_design.phi_parameter_index.loc[list(latent_order), list(latent_order)]
+		phi = _resolve_matrix(
+			phi_df,
+			parameter_index=phi_idx_df,
+			vector_by_index=vector_by_index,
+			nan_default=1.0,
+		)
+		phi = (phi + phi.T) / 2.0
+		diag = np.maximum(np.diag(phi), 1e-6)
+		np.fill_diagonal(phi, diag)
+		phi, _ = _ensure_positive_definite(phi)
+		return phi, warnings
 
 	phi = np.eye(n_latent, dtype=float)
 	latent_to_idx = {name: idx for idx, name in enumerate(latent_order)}

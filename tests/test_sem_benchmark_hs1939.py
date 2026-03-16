@@ -13,9 +13,12 @@ DATA_DIR = Path(__file__).parent / "data"
 HS1939_COLUMNS = ("x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8", "x9")
 HS1939_SYNTAX = "\n".join(
     (
-        "visual =~ x1 + x2 + x3",
-        "textual =~ x4 + x5 + x6",
-        "speed =~ x7 + x8 + x9",
+        "visual =~ 1*x1 + x2 + x3",
+        "textual =~ 1*x4 + x5 + x6",
+        "speed =~ 1*x7 + x8 + x9",
+        "visual ~~ visual + textual + speed",
+        "textual ~~ textual + speed",
+        "speed ~~ speed",
     )
 )
 
@@ -36,11 +39,11 @@ def _fit_hs1939() -> object:
     return SEMModel(HS1939_SYNTAX).fit(_load_hs1939_data())
 
 
-def _loading_estimate(result: object, *, latent: str, indicator: str) -> float:
+def _parameter_estimate(result: object, *, lhs: str, operator: str, rhs: str) -> float:
     row = next(
         row
         for row in result.parameter_table
-        if row["operator"] == "=~" and row["lhs"] == latent and row["rhs"] == indicator
+        if row["lhs"] == lhs and row["operator"] == operator and row["rhs"] == rhs
     )
     return float(result.parameters[str(row["parameter"])])
 
@@ -64,8 +67,9 @@ def test_hs1939_benchmark_level_a_fit_contract() -> None:
     assert result.n_obs == 301
     assert result.converged is True
     assert result.parameter_inference
-    assert result.optimization_info["fit_status"] in {"ok", "partial"}
+    assert result.optimization_info["fit_status"] == "ok"
     assert result.optimization_info["df_model"] > 0
+    assert not any("no fixed loading marker" in warning.lower() for warning in result.warnings)
     for key in ("cfi", "tli", "rmsea", "srmr", "aic", "bic"):
         assert key in result.fit_indices
         assert math.isfinite(result.fit_indices[key])
@@ -74,15 +78,12 @@ def test_hs1939_benchmark_level_a_fit_contract() -> None:
 def test_hs1939_benchmark_level_b_loading_direction_and_order() -> None:
     result = _fit_hs1939()
     loadings = {
-        (latent, indicator): _loading_estimate(result, latent=latent, indicator=indicator)
+        (latent, indicator): _parameter_estimate(result, lhs=latent, operator="=~", rhs=indicator)
         for latent, indicator in (
-            ("visual", "x1"),
             ("visual", "x2"),
             ("visual", "x3"),
-            ("textual", "x4"),
             ("textual", "x5"),
             ("textual", "x6"),
-            ("speed", "x7"),
             ("speed", "x8"),
             ("speed", "x9"),
         )
@@ -93,26 +94,62 @@ def test_hs1939_benchmark_level_b_loading_direction_and_order() -> None:
     assert loadings[("speed", "x8")] > loadings[("speed", "x9")]
 
 
-def test_hs1939_benchmark_level_c_partial_reference_alignment() -> None:
+def test_hs1939_benchmark_level_c_expanded_reference_alignment() -> None:
     reference = _load_hs1939_reference()
     result = _fit_hs1939()
     targets = reference["reference_statistics"]
     loading_tol = reference["comparison_policy"]["selected_loading_abs_tol"]
+    speed_loading_tol = reference["comparison_policy"]["speed_loading_abs_tol"]
+    latent_cov_tol = reference["comparison_policy"]["latent_covariance_abs_tol"]
+    latent_var_tol = reference["comparison_policy"]["latent_variance_abs_tol"]
+    residual_tol = reference["comparison_policy"]["residual_variance_abs_tol"]
     fit_tol = reference["comparison_policy"]["fit_index_abs_tol"]
 
-    assert _loading_estimate(result, latent="visual", indicator="x2") == pytest.approx(
+    assert _parameter_estimate(result, lhs="visual", operator="=~", rhs="x2") == pytest.approx(
         targets["selected_loadings"]["visual_x2"], abs=loading_tol
     )
-    assert _loading_estimate(result, latent="visual", indicator="x3") == pytest.approx(
+    assert _parameter_estimate(result, lhs="visual", operator="=~", rhs="x3") == pytest.approx(
         targets["selected_loadings"]["visual_x3"], abs=loading_tol
     )
-    assert _loading_estimate(result, latent="textual", indicator="x5") == pytest.approx(
+    assert _parameter_estimate(result, lhs="textual", operator="=~", rhs="x5") == pytest.approx(
         targets["selected_loadings"]["textual_x5"], abs=loading_tol
     )
-    assert _loading_estimate(result, latent="textual", indicator="x6") == pytest.approx(
+    assert _parameter_estimate(result, lhs="textual", operator="=~", rhs="x6") == pytest.approx(
         targets["selected_loadings"]["textual_x6"], abs=loading_tol
     )
+    assert _parameter_estimate(result, lhs="speed", operator="=~", rhs="x8") == pytest.approx(
+        targets["selected_loadings"]["speed_x8"], abs=speed_loading_tol
+    )
+    assert _parameter_estimate(result, lhs="speed", operator="=~", rhs="x9") == pytest.approx(
+        targets["selected_loadings"]["speed_x9"], abs=speed_loading_tol
+    )
+
+    assert _parameter_estimate(result, lhs="visual", operator="~~", rhs="visual") == pytest.approx(
+        targets["latent_variances"]["visual"], abs=latent_var_tol
+    )
+    assert _parameter_estimate(result, lhs="textual", operator="~~", rhs="textual") == pytest.approx(
+        targets["latent_variances"]["textual"], abs=latent_var_tol
+    )
+    assert _parameter_estimate(result, lhs="speed", operator="~~", rhs="speed") == pytest.approx(
+        targets["latent_variances"]["speed"], abs=latent_var_tol
+    )
+    assert _parameter_estimate(result, lhs="visual", operator="~~", rhs="textual") == pytest.approx(
+        targets["latent_covariances"]["visual~~textual"], abs=latent_cov_tol
+    )
+    assert _parameter_estimate(result, lhs="visual", operator="~~", rhs="speed") == pytest.approx(
+        targets["latent_covariances"]["visual~~speed"], abs=latent_cov_tol
+    )
+    assert _parameter_estimate(result, lhs="textual", operator="~~", rhs="speed") == pytest.approx(
+        targets["latent_covariances"]["textual~~speed"], abs=latent_cov_tol
+    )
+
+    for indicator, expected in targets["residual_variances"].items():
+        assert _parameter_estimate(result, lhs=indicator, operator="~~", rhs=indicator) == pytest.approx(
+            expected,
+            abs=residual_tol,
+        )
+
     assert result.fit_indices["cfi"] == pytest.approx(targets["fit_indices"]["cfi"], abs=fit_tol)
     assert result.fit_indices["tli"] == pytest.approx(targets["fit_indices"]["tli"], abs=fit_tol)
-    assert result.fit_indices["rmsea"] == pytest.approx(targets["fit_indices"]["rmsea"], abs=0.05)
-    assert result.fit_indices["srmr"] < 0.20
+    assert result.fit_indices["rmsea"] == pytest.approx(targets["fit_indices"]["rmsea"], abs=fit_tol)
+    assert result.fit_indices["srmr"] == pytest.approx(targets["fit_indices"]["srmr"], abs=fit_tol)

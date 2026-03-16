@@ -25,6 +25,8 @@ def build_measurement_design(
 
 	parameter_lookup = _parameter_lookup(parameter_table)
 	theta_lookup = _theta_parameter_lookup(parameter_table)
+	theta_cov_lookup = _theta_covariance_lookup(parameter_table)
+	phi_lookup = _phi_parameter_lookup(parameter_table)
 	latent_order: list[str] = []
 	latent_seen: set[str] = set()
 	observed_order: list[str] = []
@@ -178,6 +180,98 @@ def build_measurement_design(
 				)
 			theta_matrix.loc[observed, observed] = float(fixed_value)
 
+	for (lhs, rhs), theta_meta in theta_cov_lookup.items():
+		if lhs not in observed_seen or rhs not in observed_seen:
+			continue
+		(
+			is_free,
+			_parameter_name,
+			parameter_index,
+			_vector_position,
+			fixed_value,
+		) = theta_meta
+		if is_free:
+			if parameter_index is None:
+				raise ValueError(
+					"Free Theta covariance parameter has no `parameter_index`: "
+					f"{lhs} ~~ {rhs}."
+				)
+			theta_matrix.loc[lhs, rhs] = np.nan
+			theta_matrix.loc[rhs, lhs] = np.nan
+			theta_parameter_index.loc[lhs, rhs] = parameter_index
+			theta_parameter_index.loc[rhs, lhs] = parameter_index
+		else:
+			if fixed_value is None:
+				raise ValueError(
+					"Fixed Theta covariance parameter has no fixed value: "
+					f"{lhs} ~~ {rhs}."
+				)
+			theta_matrix.loc[lhs, rhs] = float(fixed_value)
+			theta_matrix.loc[rhs, lhs] = float(fixed_value)
+
+	phi_matrix = pd.DataFrame(
+		0.0,
+		index=latent_order,
+		columns=latent_order,
+	)
+	phi_parameter_index = pd.DataFrame(
+		0,
+		index=latent_order,
+		columns=latent_order,
+		dtype=int,
+	)
+	phi_next_index = _infer_next_parameter_index(parameter_table, default=theta_next_index)
+	for latent in latent_order:
+		phi_meta = phi_lookup.get((latent, latent))
+		if phi_meta is None:
+			phi_matrix.loc[latent, latent] = np.nan
+			phi_parameter_index.loc[latent, latent] = phi_next_index
+			phi_next_index += 1
+			continue
+		(
+			is_free,
+			_parameter_name,
+			parameter_index,
+			_vector_position,
+			fixed_value,
+		) = phi_meta
+		if is_free:
+			if parameter_index is None:
+				raise ValueError(f"Free Phi variance for latent `{latent}` has no `parameter_index`.")
+			phi_matrix.loc[latent, latent] = np.nan
+			phi_parameter_index.loc[latent, latent] = parameter_index
+		else:
+			if fixed_value is None:
+				raise ValueError(f"Fixed Phi variance for latent `{latent}` has no fixed value.")
+			phi_matrix.loc[latent, latent] = float(fixed_value)
+
+	for (lhs, rhs), phi_meta in phi_lookup.items():
+		if lhs == rhs or lhs not in latent_seen or rhs not in latent_seen:
+			continue
+		(
+			is_free,
+			_parameter_name,
+			parameter_index,
+			_vector_position,
+			fixed_value,
+		) = phi_meta
+		if is_free:
+			if parameter_index is None:
+				raise ValueError(
+					f"Free Phi covariance parameter has no `parameter_index`: {lhs} ~~ {rhs}."
+				)
+			phi_matrix.loc[lhs, rhs] = np.nan
+			phi_matrix.loc[rhs, lhs] = np.nan
+			phi_parameter_index.loc[lhs, rhs] = parameter_index
+			phi_parameter_index.loc[rhs, lhs] = parameter_index
+		else:
+			if fixed_value is None:
+				raise ValueError(
+					f"Fixed Phi covariance parameter has no fixed value: {lhs} ~~ {rhs}."
+				)
+			phi_matrix.loc[lhs, rhs] = float(fixed_value)
+			phi_matrix.loc[rhs, lhs] = float(fixed_value)
+
 	warnings: list[str] = []
 	for latent in latent_order:
 		if not has_fixed_marker.get(latent, False):
@@ -206,6 +300,8 @@ def build_measurement_design(
 		lambda_parameter_index=lambda_parameter_index,
 		theta_matrix=theta_matrix,
 		theta_parameter_index=theta_parameter_index,
+		phi_matrix=phi_matrix,
+		phi_parameter_index=phi_parameter_index,
 		loading_parameters=tuple(loading_parameters),
 		block_latent_pairs=tuple(block_latent_pairs),
 		free_loadings=tuple(free_loadings),
@@ -281,6 +377,69 @@ def _theta_parameter_lookup(
 		fixed_raw = row["fixed_value"]
 		vector_position = row.get("vector_position")
 		lookup[lhs] = (
+			bool(row["is_free"]),
+			row["parameter"] if isinstance(row["parameter"], str) else None,
+			int(row["parameter_index"]) if isinstance(row["parameter_index"], int) else None,
+			int(vector_position) if isinstance(vector_position, int) else None,
+			float(fixed_raw) if isinstance(fixed_raw, (int, float)) else None,
+		)
+	return lookup
+
+
+def _theta_covariance_lookup(
+	parameter_table: tuple[dict[str, Any], ...] | None,
+) -> dict[tuple[str, str], tuple[bool, str | None, int | None, int | None, float | None]]:
+	if parameter_table is None:
+		return {}
+	lookup: dict[
+		tuple[str, str], tuple[bool, str | None, int | None, int | None, float | None]
+	] = {}
+	for row in parameter_table:
+		operator = row.get("operator")
+		lhs = row.get("lhs")
+		rhs = row.get("rhs")
+		if operator != "~~":
+			continue
+		if not isinstance(lhs, str) or not isinstance(rhs, str) or lhs == rhs:
+			continue
+		key = tuple(sorted((lhs, rhs)))
+		if key in lookup:
+			raise ValueError(
+				"Duplicate Theta covariance parameter row found for observed pair "
+				f"`{key[0]} ~~ {key[1]}`."
+			)
+		fixed_raw = row["fixed_value"]
+		vector_position = row.get("vector_position")
+		lookup[key] = (
+			bool(row["is_free"]),
+			row["parameter"] if isinstance(row["parameter"], str) else None,
+			int(row["parameter_index"]) if isinstance(row["parameter_index"], int) else None,
+			int(vector_position) if isinstance(vector_position, int) else None,
+			float(fixed_raw) if isinstance(fixed_raw, (int, float)) else None,
+		)
+	return lookup
+
+
+def _phi_parameter_lookup(
+	parameter_table: tuple[dict[str, Any], ...] | None,
+) -> dict[tuple[str, str], tuple[bool, str | None, int | None, int | None, float | None]]:
+	if parameter_table is None:
+		return {}
+	lookup: dict[
+		tuple[str, str], tuple[bool, str | None, int | None, int | None, float | None]
+	] = {}
+	for row in parameter_table:
+		operator = row.get("operator")
+		lhs = row.get("lhs")
+		rhs = row.get("rhs")
+		if operator != "~~":
+			continue
+		if not isinstance(lhs, str) or not isinstance(rhs, str):
+			continue
+		key = tuple(sorted((lhs, rhs)))
+		fixed_raw = row["fixed_value"]
+		vector_position = row.get("vector_position")
+		lookup[key] = (
 			bool(row["is_free"]),
 			row["parameter"] if isinstance(row["parameter"], str) else None,
 			int(row["parameter_index"]) if isinstance(row["parameter_index"], int) else None,

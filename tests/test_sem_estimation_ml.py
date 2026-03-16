@@ -100,6 +100,35 @@ def test_build_implied_covariance_measurement_only_smoke() -> None:
     assert float(np.min(np.diag(sigma.to_numpy(dtype=float)))) > 0.0
 
 
+def test_build_implied_covariance_measurement_only_uses_latent_covariance() -> None:
+    spec = parse_model(
+        "visual =~ 1*x1 + x2 + x3\n"
+        "textual =~ 1*y1 + y2 + y3\n"
+        "visual ~~ textual"
+    )
+    parameter_table = (
+        {"relation_index": 1, "term_index": 1, "lhs": "visual", "operator": "=~", "rhs": "x1", "is_free": False, "parameter": None, "parameter_index": None, "vector_position": None, "fixed_value": 1.0},
+        {"relation_index": 1, "term_index": 2, "lhs": "visual", "operator": "=~", "rhs": "x2", "is_free": True, "parameter": "p1", "parameter_index": 1, "vector_position": 0, "fixed_value": None},
+        {"relation_index": 1, "term_index": 3, "lhs": "visual", "operator": "=~", "rhs": "x3", "is_free": True, "parameter": "p2", "parameter_index": 2, "vector_position": 1, "fixed_value": None},
+        {"relation_index": 2, "term_index": 1, "lhs": "textual", "operator": "=~", "rhs": "y1", "is_free": False, "parameter": None, "parameter_index": None, "vector_position": None, "fixed_value": 1.0},
+        {"relation_index": 2, "term_index": 2, "lhs": "textual", "operator": "=~", "rhs": "y2", "is_free": True, "parameter": "p3", "parameter_index": 3, "vector_position": 2, "fixed_value": None},
+        {"relation_index": 2, "term_index": 3, "lhs": "textual", "operator": "=~", "rhs": "y3", "is_free": True, "parameter": "p4", "parameter_index": 4, "vector_position": 3, "fixed_value": None},
+        {"relation_index": 3, "term_index": 1, "lhs": "visual", "operator": "~~", "rhs": "textual", "is_free": True, "parameter": "p5", "parameter_index": 5, "vector_position": 4, "fixed_value": None},
+        {"relation_index": 4, "term_index": 1, "lhs": "x1", "operator": "~~", "rhs": "x1", "is_free": True, "parameter": "p6", "parameter_index": 6, "vector_position": 5, "fixed_value": None},
+        {"relation_index": 5, "term_index": 1, "lhs": "x2", "operator": "~~", "rhs": "x2", "is_free": True, "parameter": "p7", "parameter_index": 7, "vector_position": 6, "fixed_value": None},
+        {"relation_index": 6, "term_index": 1, "lhs": "x3", "operator": "~~", "rhs": "x3", "is_free": True, "parameter": "p8", "parameter_index": 8, "vector_position": 7, "fixed_value": None},
+        {"relation_index": 7, "term_index": 1, "lhs": "y1", "operator": "~~", "rhs": "y1", "is_free": True, "parameter": "p9", "parameter_index": 9, "vector_position": 8, "fixed_value": None},
+        {"relation_index": 8, "term_index": 1, "lhs": "y2", "operator": "~~", "rhs": "y2", "is_free": True, "parameter": "p10", "parameter_index": 10, "vector_position": 9, "fixed_value": None},
+        {"relation_index": 9, "term_index": 1, "lhs": "y3", "operator": "~~", "rhs": "y3", "is_free": True, "parameter": "p11", "parameter_index": 11, "vector_position": 10, "fixed_value": None},
+    )
+    measurement_design = build_measurement_design(spec, parameter_table=parameter_table)
+    parameter_index_map = build_parameter_index_map(parameter_table)
+    start = build_start_vector(parameter_index_map, parameter_table=parameter_table)
+    sigma = build_implied_covariance(measurement_design, start, parameter_index_map)
+    assert sigma.loc["x1", "y1"] > 0.0
+    assert sigma.loc["x2", "y2"] > 0.0
+
+
 def test_optimize_ml_parameters_smoke() -> None:
     rng = np.random.default_rng(42)
     n = 300

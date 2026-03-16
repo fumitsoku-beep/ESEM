@@ -102,7 +102,8 @@ from psysem.sem.estimation import optimize_ml_parameters
 
 1. 已补入第一批 SEM benchmark 原始 CSV 与 provenance JSON；
 2. 已新增 `HolzingerSwineford1939`、`PoliticalDemocracy` 与 boundary cases 三组 benchmark 测试；
-3. benchmark 当前仍定位为 prototype-level 基线验证，重点覆盖 Level A / Level B 与部分 warning 语义。
+3. benchmark 当前仍整体处于 prototype-level 基线阶段，但 `HS1939` 与 `PoliticalDemocracy` 已进入部分 Level C 参数级数值回归；
+4. 当前剩余差距主要来自优化、fit indices 与 inference 等模块仍偏 prototype-level 的数值策略，而不是 SEM 理论路径本身错误。
 
 ---
 
@@ -128,6 +129,11 @@ from psysem.sem.estimation import optimize_ml_parameters
 
 - [x] 补第一批 benchmark 数据与测试
 - [x] 增加第一组 boundary warning benchmark
+- [x] 为 `HolzingerSwineford1939` 补入 latent variance / covariance，并升级到更严格的部分 Level C 数值回归
+- [x] 为 `PoliticalDemocracy` 补入 selected residual covariance 参考值，并接通对应 implied covariance 路径
+- [ ] 继续收紧 `HolzingerSwineford1939` 与 `PoliticalDemocracy` 的 covariance / variance / fit-index 容差
+- [ ] 评估是否加入 selected `SE / z / p` 的 benchmark 断言
+- [ ] 固定 benchmark 参考值生成流程（`lavaan` 版本、模型语法、参数对齐规则、reference.json 生成方式）
 - [ ] 开始整理更正式的结果表输出
 - [ ] 继续扩展 ESEM generator / judge / selector
 

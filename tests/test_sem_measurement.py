@@ -1,7 +1,14 @@
 import pandas as pd
 import pytest
 
-from psysem import build_measurement_design, check_measurement_identification, parse_model
+from psysem import (
+    build_implied_covariance,
+    build_measurement_design,
+    build_parameter_index_map,
+    build_start_vector,
+    check_measurement_identification,
+    parse_model,
+)
 
 
 def test_build_measurement_design_smoke() -> None:
@@ -17,9 +24,11 @@ def test_build_measurement_design_smoke() -> None:
     assert int(design.lambda_parameter_index.loc["x2", "eta"]) == 1
     assert int(design.lambda_parameter_index.loc["x3", "eta"]) == 2
     assert design.theta_matrix.shape == (3, 3)
+    assert design.phi_matrix.shape == (1, 1)
     assert int(design.theta_parameter_index.loc["x1", "x1"]) == 3
     assert int(design.theta_parameter_index.loc["x2", "x2"]) == 4
     assert int(design.theta_parameter_index.loc["x3", "x3"]) == 5
+    assert int(design.phi_parameter_index.loc["eta", "eta"]) == 6
     assert len(design.loading_parameters) == 3
     assert design.loading_parameters[0].is_free is False
     assert design.loading_parameters[1].is_free is True
@@ -151,3 +160,293 @@ def test_build_measurement_design_tracks_block_latent_pairs() -> None:
         ("internalizing", "internalizing_f1"),
         ("externalizing", "externalizing_f1"),
     )
+
+
+def test_build_measurement_design_preserves_latent_covariance_rows() -> None:
+    spec = parse_model(
+        "visual =~ 1*x1 + x2 + x3\n"
+        "textual =~ 1*y1 + y2 + y3\n"
+        "visual ~~ textual"
+    )
+    parameter_table = (
+        {
+            "relation_index": 1,
+            "term_index": 1,
+            "lhs": "visual",
+            "operator": "=~",
+            "rhs": "x1",
+            "is_free": False,
+            "parameter": None,
+            "parameter_index": None,
+            "vector_position": None,
+            "fixed_value": 1.0,
+        },
+        {
+            "relation_index": 1,
+            "term_index": 2,
+            "lhs": "visual",
+            "operator": "=~",
+            "rhs": "x2",
+            "is_free": True,
+            "parameter": "p1",
+            "parameter_index": 1,
+            "vector_position": 0,
+            "fixed_value": None,
+        },
+        {
+            "relation_index": 1,
+            "term_index": 3,
+            "lhs": "visual",
+            "operator": "=~",
+            "rhs": "x3",
+            "is_free": True,
+            "parameter": "p2",
+            "parameter_index": 2,
+            "vector_position": 1,
+            "fixed_value": None,
+        },
+        {
+            "relation_index": 2,
+            "term_index": 1,
+            "lhs": "textual",
+            "operator": "=~",
+            "rhs": "y1",
+            "is_free": False,
+            "parameter": None,
+            "parameter_index": None,
+            "vector_position": None,
+            "fixed_value": 1.0,
+        },
+        {
+            "relation_index": 2,
+            "term_index": 2,
+            "lhs": "textual",
+            "operator": "=~",
+            "rhs": "y2",
+            "is_free": True,
+            "parameter": "p3",
+            "parameter_index": 3,
+            "vector_position": 2,
+            "fixed_value": None,
+        },
+        {
+            "relation_index": 2,
+            "term_index": 3,
+            "lhs": "textual",
+            "operator": "=~",
+            "rhs": "y3",
+            "is_free": True,
+            "parameter": "p4",
+            "parameter_index": 4,
+            "vector_position": 3,
+            "fixed_value": None,
+        },
+        {
+            "relation_index": 3,
+            "term_index": 1,
+            "lhs": "visual",
+            "operator": "~~",
+            "rhs": "textual",
+            "is_free": True,
+            "parameter": "p5",
+            "parameter_index": 5,
+            "vector_position": 4,
+            "fixed_value": None,
+        },
+    )
+    design = build_measurement_design(spec, parameter_table=parameter_table)
+    assert pd.isna(design.phi_matrix.loc["visual", "textual"])
+    assert pd.isna(design.phi_matrix.loc["textual", "visual"])
+    assert int(design.phi_parameter_index.loc["visual", "textual"]) == 5
+    assert int(design.phi_parameter_index.loc["textual", "visual"]) == 5
+
+
+def test_build_measurement_design_preserves_observed_residual_covariance() -> None:
+    spec = parse_model("eta =~ 1*x1 + x2 + x3\nx1 ~~ x2")
+    parameter_table = (
+        {
+            "relation_index": 1,
+            "term_index": 1,
+            "lhs": "eta",
+            "operator": "=~",
+            "rhs": "x1",
+            "is_free": False,
+            "parameter": None,
+            "parameter_index": None,
+            "vector_position": None,
+            "fixed_value": 1.0,
+        },
+        {
+            "relation_index": 1,
+            "term_index": 2,
+            "lhs": "eta",
+            "operator": "=~",
+            "rhs": "x2",
+            "is_free": True,
+            "parameter": "p1",
+            "parameter_index": 1,
+            "vector_position": 0,
+            "fixed_value": None,
+        },
+        {
+            "relation_index": 1,
+            "term_index": 3,
+            "lhs": "eta",
+            "operator": "=~",
+            "rhs": "x3",
+            "is_free": True,
+            "parameter": "p2",
+            "parameter_index": 2,
+            "vector_position": 1,
+            "fixed_value": None,
+        },
+        {
+            "relation_index": 2,
+            "term_index": 1,
+            "lhs": "x1",
+            "operator": "~~",
+            "rhs": "x2",
+            "is_free": True,
+            "parameter": "p3",
+            "parameter_index": 3,
+            "vector_position": 2,
+            "fixed_value": None,
+        },
+        {
+            "relation_index": 3,
+            "term_index": 1,
+            "lhs": "x1",
+            "operator": "~~",
+            "rhs": "x1",
+            "is_free": True,
+            "parameter": "p4",
+            "parameter_index": 4,
+            "vector_position": 3,
+            "fixed_value": None,
+        },
+        {
+            "relation_index": 4,
+            "term_index": 1,
+            "lhs": "x2",
+            "operator": "~~",
+            "rhs": "x2",
+            "is_free": True,
+            "parameter": "p5",
+            "parameter_index": 5,
+            "vector_position": 4,
+            "fixed_value": None,
+        },
+        {
+            "relation_index": 5,
+            "term_index": 1,
+            "lhs": "x3",
+            "operator": "~~",
+            "rhs": "x3",
+            "is_free": True,
+            "parameter": "p6",
+            "parameter_index": 6,
+            "vector_position": 5,
+            "fixed_value": None,
+        },
+    )
+    design = build_measurement_design(spec, parameter_table=parameter_table)
+    assert pd.isna(design.theta_matrix.loc["x1", "x2"])
+    assert pd.isna(design.theta_matrix.loc["x2", "x1"])
+    assert int(design.theta_parameter_index.loc["x1", "x2"]) == 3
+    assert int(design.theta_parameter_index.loc["x2", "x1"]) == 3
+
+
+def test_build_implied_covariance_uses_observed_residual_covariance() -> None:
+    spec = parse_model("eta =~ 1*x1 + x2 + x3\nx1 ~~ x2")
+    parameter_table = (
+        {
+            "relation_index": 1,
+            "term_index": 1,
+            "lhs": "eta",
+            "operator": "=~",
+            "rhs": "x1",
+            "is_free": False,
+            "parameter": None,
+            "parameter_index": None,
+            "vector_position": None,
+            "fixed_value": 1.0,
+        },
+        {
+            "relation_index": 1,
+            "term_index": 2,
+            "lhs": "eta",
+            "operator": "=~",
+            "rhs": "x2",
+            "is_free": True,
+            "parameter": "p1",
+            "parameter_index": 1,
+            "vector_position": 0,
+            "fixed_value": None,
+        },
+        {
+            "relation_index": 1,
+            "term_index": 3,
+            "lhs": "eta",
+            "operator": "=~",
+            "rhs": "x3",
+            "is_free": True,
+            "parameter": "p2",
+            "parameter_index": 2,
+            "vector_position": 1,
+            "fixed_value": None,
+        },
+        {
+            "relation_index": 2,
+            "term_index": 1,
+            "lhs": "x1",
+            "operator": "~~",
+            "rhs": "x2",
+            "is_free": True,
+            "parameter": "p3",
+            "parameter_index": 3,
+            "vector_position": 2,
+            "fixed_value": None,
+        },
+        {
+            "relation_index": 3,
+            "term_index": 1,
+            "lhs": "x1",
+            "operator": "~~",
+            "rhs": "x1",
+            "is_free": True,
+            "parameter": "p4",
+            "parameter_index": 4,
+            "vector_position": 3,
+            "fixed_value": None,
+        },
+        {
+            "relation_index": 4,
+            "term_index": 1,
+            "lhs": "x2",
+            "operator": "~~",
+            "rhs": "x2",
+            "is_free": True,
+            "parameter": "p5",
+            "parameter_index": 5,
+            "vector_position": 4,
+            "fixed_value": None,
+        },
+        {
+            "relation_index": 5,
+            "term_index": 1,
+            "lhs": "x3",
+            "operator": "~~",
+            "rhs": "x3",
+            "is_free": True,
+            "parameter": "p6",
+            "parameter_index": 6,
+            "vector_position": 5,
+            "fixed_value": None,
+        },
+    )
+    parameter_index_map = build_parameter_index_map(parameter_table)
+    design = build_measurement_design(spec, parameter_table=parameter_table)
+    start_vector = build_start_vector(parameter_index_map, parameter_table=parameter_table)
+    implied = build_implied_covariance(design, start_vector, parameter_index_map)
+    assert implied.loc["x1", "x2"] > 0.0
+    assert implied.loc["x2", "x1"] == pytest.approx(implied.loc["x1", "x2"])

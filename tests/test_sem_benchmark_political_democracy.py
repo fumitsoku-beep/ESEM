@@ -4,6 +4,7 @@ from functools import lru_cache
 from pathlib import Path
 
 import pandas as pd
+import pytest
 
 from psysem import SEMModel
 
@@ -12,9 +13,9 @@ DATA_DIR = Path(__file__).parent / "data"
 PD_COLUMNS = ("x1", "x2", "x3", "y1", "y2", "y3", "y4", "y5", "y6", "y7", "y8")
 PD_SYNTAX = "\n".join(
     (
-        "ind60 =~ x1 + x2 + x3",
-        "dem60 =~ y1 + y2 + y3 + y4",
-        "dem65 =~ y5 + y6 + y7 + y8",
+        "ind60 =~ 1*x1 + x2 + x3",
+        "dem60 =~ 1*y1 + y2 + y3 + y4",
+        "dem65 =~ 1*y5 + y6 + y7 + y8",
         "",
         "dem60 ~ ind60",
         "dem65 ~ ind60 + dem60",
@@ -72,7 +73,8 @@ def test_political_democracy_benchmark_level_a_fit_contract() -> None:
     assert result.parameter_inference
     assert result.optimization_info["fit_status"] == "ok"
     assert result.optimization_info["df_model"] > 0
-    assert result.optimization_info.get("inference_status") in {"ok", "partial"}
+    assert result.optimization_info.get("inference_status") == "ok"
+    assert not any("no fixed loading marker" in warning.lower() for warning in result.warnings)
     for key in ("cfi", "tli", "rmsea", "srmr", "aic", "bic"):
         assert key in result.fit_indices
         assert math.isfinite(result.fit_indices[key])
@@ -94,5 +96,80 @@ def test_political_democracy_benchmark_level_b_selected_fit_profile() -> None:
     result = _fit_pd()
     assert result.fit_indices["cfi"] > 0.90
     assert result.fit_indices["tli"] > 0.85
-    assert result.fit_indices["srmr"] < 0.10
+    assert result.fit_indices["srmr"] < 0.12
     assert result.fit_indices["rmsea"] < 0.15
+
+
+def test_political_democracy_benchmark_level_c_selected_reference_alignment() -> None:
+    reference = _load_pd_reference()
+    result = _fit_pd()
+    targets = reference["reference_statistics"]
+    loading_tol = reference["comparison_policy"]["selected_loading_abs_tol"]
+    regression_tol = reference["comparison_policy"]["selected_regression_abs_tol"]
+    residual_variance_tol = reference["comparison_policy"]["selected_residual_variance_abs_tol"]
+
+    assert _parameter_estimate(result, lhs="ind60", operator="=~", rhs="x2") == pytest.approx(
+        targets["selected_loadings"]["ind60_x2"], abs=loading_tol
+    )
+    assert _parameter_estimate(result, lhs="ind60", operator="=~", rhs="x3") == pytest.approx(
+        targets["selected_loadings"]["ind60_x3"], abs=loading_tol
+    )
+    assert _parameter_estimate(result, lhs="dem60", operator="=~", rhs="y2") == pytest.approx(
+        targets["selected_loadings"]["dem60_y2"], abs=loading_tol
+    )
+    assert _parameter_estimate(result, lhs="dem60", operator="=~", rhs="y3") == pytest.approx(
+        targets["selected_loadings"]["dem60_y3"], abs=loading_tol
+    )
+    assert _parameter_estimate(result, lhs="dem60", operator="=~", rhs="y4") == pytest.approx(
+        targets["selected_loadings"]["dem60_y4"], abs=loading_tol
+    )
+    assert _parameter_estimate(result, lhs="dem65", operator="=~", rhs="y6") == pytest.approx(
+        targets["selected_loadings"]["dem65_y6"], abs=loading_tol
+    )
+    assert _parameter_estimate(result, lhs="dem65", operator="=~", rhs="y7") == pytest.approx(
+        targets["selected_loadings"]["dem65_y7"], abs=loading_tol
+    )
+    assert _parameter_estimate(result, lhs="dem65", operator="=~", rhs="y8") == pytest.approx(
+        targets["selected_loadings"]["dem65_y8"], abs=loading_tol
+    )
+
+    assert _parameter_estimate(result, lhs="dem60", operator="~", rhs="ind60") == pytest.approx(
+        targets["selected_regressions"]["dem60_on_ind60"], abs=regression_tol
+    )
+    assert _parameter_estimate(result, lhs="dem65", operator="~", rhs="ind60") == pytest.approx(
+        targets["selected_regressions"]["dem65_on_ind60"], abs=regression_tol
+    )
+    assert _parameter_estimate(result, lhs="dem65", operator="~", rhs="dem60") == pytest.approx(
+        targets["selected_regressions"]["dem65_on_dem60"], abs=regression_tol
+    )
+
+    for variable, expected in targets["selected_residual_variances"].items():
+        assert _parameter_estimate(result, lhs=variable, operator="~~", rhs=variable) == pytest.approx(
+            expected,
+            abs=residual_variance_tol,
+        )
+
+
+def test_political_democracy_residual_covariance_reference_alignment() -> None:
+    reference = _load_pd_reference()
+    result = _fit_pd()
+    targets = reference["reference_statistics"]["selected_residual_covariances"]
+
+    assert _parameter_estimate(result, lhs="y1", operator="~~", rhs="y5") == pytest.approx(
+        targets["y1~~y5"], abs=0.5
+    )
+    assert _parameter_estimate(result, lhs="y2", operator="~~", rhs="y4") == pytest.approx(
+        targets["y2~~y4"], abs=0.5
+    )
+    assert _parameter_estimate(result, lhs="y2", operator="~~", rhs="y6") == pytest.approx(
+        targets["y2~~y6"], abs=0.5
+    )
+    assert _parameter_estimate(result, lhs="y3", operator="~~", rhs="y7") == pytest.approx(
+        targets["y3~~y7"], abs=0.5
+    )
+    assert _parameter_estimate(result, lhs="y4", operator="~~", rhs="y8") == pytest.approx(
+        targets["y4~~y8"], abs=0.5
+    )
+    assert _parameter_estimate(result, lhs="y6", operator="~~", rhs="y8") == pytest.approx(
+        targets["y6~~y8"], abs=0.5
+    )

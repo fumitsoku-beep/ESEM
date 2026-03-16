@@ -188,7 +188,16 @@ flowchart TD
 1. 已新增 `HolzingerSwineford1939` benchmark 首版自动测试；
 2. 已新增 `PoliticalDemocracy` benchmark 首版自动测试；
 3. 已新增 boundary warning / failure benchmark 首版自动测试；
-4. 当前三组 SEM benchmark 仍以 prototype-level 的 Level A / Level B 断言为主。
+4. 当前 benchmark 仍整体处于 prototype-level 基线阶段，但 `HS1939` 与 `PoliticalDemocracy` 已开始进入部分 Level C 参数级数值回归；
+5. 其中 `HS1939` 已覆盖 selected loading / observed residual variance / latent variance / latent covariance；
+6. `PoliticalDemocracy` 已覆盖 selected loading / structural regression / observed residual variance / selected residual covariance。
+
+补充说明：当前仍未完全达到成熟 SEM 包级别的严格数值等值，主要原因并不在于 SEM 理论公式错误，而在于部分模块仍采用 prototype 级实现：
+
+1. 起点、restart、bounds 与优化稳定化策略仍较朴素；
+2. fit indices 的 baseline model / 边界处理 / 数值稳定化细节尚未完全对齐外部参考实现；
+3. parameter inference 目前仍主要依赖数值 Hessian，因此 `SE / z / p` 对步长和局部曲率更敏感；
+4. 一些 covariance 路径虽已接通，但离“全参数严格数值回归”仍有继续收紧空间。
 
 主要测试文件：
 
@@ -437,13 +446,16 @@ flowchart TD
 
 1. **SEM**：从输入解析到结果展示的基础闭环；
 2. **SEM benchmark（首版）**：`HolzingerSwineford1939`、`PoliticalDemocracy` 与 boundary cases 已有第一批自动化基线测试与 provenance / warning 语义验证；
-3. **EFA**：从 diagnostics 到 best model 的工作流闭环；
-4. **ESEM**：从 spec 校验到 best candidate 的 MVP 闭环。
+3. **HS1939 benchmark（增强中）**：已开始使用更贴近 `lavaan` 的 fixed-marker 语法，并扩展到更多 loading / residual variance / latent covariance 的参数级对照；
+4. **PoliticalDemocracy benchmark（增强中）**：已开始使用 fixed-marker 语法，并扩展到 selected loading / regression / residual variance 的参数级对照；
+5. **PoliticalDemocracy residual covariance（已接入）**：residual covariance 参考值已进入正式自动 benchmark 断言，不再只是 pending / xfail 占位；
+6. **EFA**：从 diagnostics 到 best model 的工作流闭环；
+7. **ESEM**：从 spec 校验到 best candidate 的 MVP 闭环。
 
 ### 7.2 仍未覆盖充分的部分
 
 1. 更完整的真实研究数据回放；
-2. 更广泛、更严格的外部软件结果对照（当前已有三组 SEM benchmark，但数值级对照仍偏宽）；
+2. 更广泛、更严格的外部软件结果对照（当前 HS1939 与 `PoliticalDemocracy` 都已开始收紧，但更小容差的 covariance / variance / inference 对照仍未完全进入稳定阶段）；
 3. 更复杂的 ESEM 候选生成策略；
 4. 更完整的稳健估计路径；
 5. 更强的数值回归基准。
@@ -460,9 +472,17 @@ flowchart TD
 
 如果只看下一步：
 
-1. SEM 继续补边界案例 benchmark，并收紧 `HolzingerSwineford1939` / `PoliticalDemocracy` 的参数级对照；
+1. SEM 不再以“新增 benchmark 数量”为首要目标，而是优先继续收紧 `HolzingerSwineford1939` 与 `PoliticalDemocracy` 的参数级数值回归；
 2. ESEM 继续补多 generator / 多 judge / 多 selector；
 3. 整体继续补外部 benchmark 对照测试。
+
+如果只看 SEM 的明确后续动作：
+
+1. 继续补全 benchmark reference.json 的更多参考值与容差说明；
+2. 继续收紧 `HS1939` 与 `PoliticalDemocracy` 的 covariance / variance / fit-index 容差；
+3. 评估是否把 selected `SE / z / p` 纳入 benchmark；
+4. 固定 benchmark 参考值生成流程；
+5. 边界 benchmark 继续扩充 warning / failure 语义覆盖，但不把它作为严格数值对齐的主任务。
 
 ---
 
