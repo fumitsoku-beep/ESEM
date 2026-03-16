@@ -174,6 +174,28 @@ flowchart TD
 
 - `tests/test_fit_smoke.py`
 
+#### Step 10：外部 benchmark 基线（首版）
+
+主要验证：
+
+1. 经典公开 benchmark 数据是否已固化到仓库中；
+2. provenance / citation 元数据是否完整；
+3. `HolzingerSwineford1939` 三因子 CFA 在当前原型实现下是否满足第一批 Level A / Level B 断言；
+4. 部分关键负荷与部分拟合指标是否与 `lavaan` 参考值保持宽容差对齐。
+
+当前状态：
+
+1. 已新增 `HolzingerSwineford1939` benchmark 首版自动测试；
+2. 已新增 `PoliticalDemocracy` benchmark 首版自动测试；
+3. 已新增 boundary warning / failure benchmark 首版自动测试；
+4. 当前三组 SEM benchmark 仍以 prototype-level 的 Level A / Level B 断言为主。
+
+主要测试文件：
+
+- `tests/test_sem_benchmark_hs1939.py`
+- `tests/test_sem_benchmark_political_democracy.py`
+- `tests/test_sem_benchmark_boundary_cases.py`
+
 ---
 
 ## 4. 当前 EFA 测试流程
@@ -414,13 +436,14 @@ flowchart TD
 ### 7.1 已覆盖
 
 1. **SEM**：从输入解析到结果展示的基础闭环；
-2. **EFA**：从 diagnostics 到 best model 的工作流闭环；
-3. **ESEM**：从 spec 校验到 best candidate 的 MVP 闭环。
+2. **SEM benchmark（首版）**：`HolzingerSwineford1939`、`PoliticalDemocracy` 与 boundary cases 已有第一批自动化基线测试与 provenance / warning 语义验证；
+3. **EFA**：从 diagnostics 到 best model 的工作流闭环；
+4. **ESEM**：从 spec 校验到 best candidate 的 MVP 闭环。
 
 ### 7.2 仍未覆盖充分的部分
 
-1. 真实研究数据回放；
-2. 与外部软件结果对照；
+1. 更完整的真实研究数据回放；
+2. 更广泛、更严格的外部软件结果对照（当前已有三组 SEM benchmark，但数值级对照仍偏宽）；
 3. 更复杂的 ESEM 候选生成策略；
 4. 更完整的稳健估计路径；
 5. 更强的数值回归基准。
@@ -437,7 +460,7 @@ flowchart TD
 
 如果只看下一步：
 
-1. SEM 继续补数值回归与边界案例；
+1. SEM 继续补边界案例 benchmark，并收紧 `HolzingerSwineford1939` / `PoliticalDemocracy` 的参数级对照；
 2. ESEM 继续补多 generator / 多 judge / 多 selector；
 3. 整体继续补外部 benchmark 对照测试。
 

@@ -15,18 +15,18 @@
 
 ### 顶层 `spec` 参数
 
-| 参数                 | 类型             | 必填 | 默认值  | 说明                                            |
-| -------------------- | ---------------- | ---- | ------- | ----------------------------------------------- |
-| `blocks`             | `list[dict]`     | 是   | -       | ESEM 分块列表。                                 |
+| 参数                 | 类型             | 必填 | 默认值  | 说明                                                                               |
+| -------------------- | ---------------- | ---- | ------- | ---------------------------------------------------------------------------------- |
+| `blocks`             | `list[dict]`     | 是   | -       | ESEM 分块列表。                                                                    |
 | `estimator`          | `str`            | 是   | -       | 估计方法。规格层接受：`ML`、`MLR`、`WLSMV`；当前完整优化主路径仍以 `ML/MLR` 为主。 |
-| `variable_types`     | `dict[str, str]` | 是   | -       | 变量类型映射。取值：`continuous`、`ordinal`。   |
-| `rotation`           | `dict`           | 否   | `None`  | 全局旋转设置（可被 block 内的 rotation 覆盖）。 |
-| `structural`         | `list[str]`      | 否   | `[]`    | 结构路径表达式（目标行为）。                    |
-| `group`              | `str`            | 否   | `None`  | 多组分析分组列。                                |
-| `weight`             | `str`            | 否   | `None`  | 抽样权重列。                                    |
-| `cluster`            | `str`            | 否   | `None`  | 聚类样本列。                                    |
-| `id`                 | `str`            | 否   | `None`  | 被试 ID 列。                                    |
-| `allow_item_overlap` | `bool`           | 否   | `False` | 是否允许同一题项出现在多个 block。              |
+| `variable_types`     | `dict[str, str]` | 是   | -       | 变量类型映射。取值：`continuous`、`ordinal`。                                      |
+| `rotation`           | `dict`           | 否   | `None`  | 全局旋转设置（可被 block 内的 rotation 覆盖）。                                    |
+| `structural`         | `list[str]`      | 否   | `[]`    | 结构路径表达式（目标行为）。                                                       |
+| `group`              | `str`            | 否   | `None`  | 多组分析分组列。                                                                   |
+| `weight`             | `str`            | 否   | `None`  | 抽样权重列。                                                                       |
+| `cluster`            | `str`            | 否   | `None`  | 聚类样本列。                                                                       |
+| `id`                 | `str`            | 否   | `None`  | 被试 ID 列。                                                                       |
+| `allow_item_overlap` | `bool`           | 否   | `False` | 是否允许同一题项出现在多个 block。                                                 |
 
 ### `blocks[]` 参数
 
@@ -79,13 +79,15 @@ spec = {
 - 已实现：`SEMModel.fit(data, spec=...)` 主入口（ML 原型路径）
 - 新增：`run_esem_workflow(...)` 最小可跑路径（`block_full` 候选）
 - 新增：EFA workflow 与 ESEM block bridge 已复用共享 preprocessing，并能根据 block 类型自动选择相关矩阵策略
-- 下一步：`network` MVP、多候选 generator/judge/selector、更完整 ordinal/稳健估计路径
+- 新增：首批 SEM benchmark 基线已落地，当前已覆盖 `HolzingerSwineford1939`、`PoliticalDemocracy` 与 boundary warning cases
+- 下一步：收紧 SEM benchmark 的参数级对照，并继续推进 `network` MVP、多候选 generator/judge/selector、更完整 ordinal/稳健估计路径
 
 ## SEM 路径说明
 
 - 顶层公共 API 继续建议使用 `from psysem import ...`。
 - 如需直接导入 SEM 子系统实现，请使用 `psysem.sem.*`。
 - 旧的 `psysem.core`、`psysem.model`、`psysem.fit_indices`、`psysem.estimation` 等兼容导入路径已删除，不再作为当前版本支持面。
+- 当前仓库已为 SEM 增加首批 benchmark 数据与自动测试，但这些 benchmark 仍属于 prototype-level 回归基线，而非与外部软件逐项等值的最终标准。
 
 ## 当前 EFA `target rotation` 说明
 

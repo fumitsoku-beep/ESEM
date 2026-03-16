@@ -5,6 +5,31 @@
 
 ---
 
+## 0. 当前状态（2026-03-16 更新）
+
+本计划文档对应的 benchmark 准备工作已经开始落地：
+
+1. 已固化第一批 benchmark 原始 CSV：
+   - `tests/data/benchmark_hs1939_raw.csv`
+   - `tests/data/benchmark_political_democracy_raw.csv`
+2. 已为两组数据补充 provenance / citation 元数据：
+   - `tests/data/benchmark_hs1939_reference.json`
+   - `tests/data/benchmark_political_democracy_reference.json`
+3. 已新增首个自动化 SEM benchmark 测试：
+   - `tests/test_sem_benchmark_hs1939.py`
+4. 已新增第二个自动化 SEM benchmark 测试（首版）：
+   - `tests/test_sem_benchmark_political_democracy.py`
+5. 已新增第一组边界 warning / failure benchmark 测试（首版）：
+   - `tests/test_sem_benchmark_boundary_cases.py`
+
+同时需要特别说明：
+
+1. 当前仓库把这些数据视为“**公开可获取的 benchmark / example data**”；
+2. 当前上游文档**不能证明这些数据属于 public domain（公共领域）**；
+3. 因此仓库中显式保留来源、文献引用与复用说明，避免把“公开可获取”误写成“公共领域”。
+
+---
+
 ## 1. 本文档目的
 
 本文档把前一份 [SEM 下一阶段完成文档（ZH）](sem-next-steps.zh-CN.md) 中提出的 benchmark 目标，进一步细化成**可执行测试计划**。
@@ -186,7 +211,7 @@ speed   =~ x7 + x8 + x9
 
 建议新增：
 
-- `tests/data/benchmark_hs1939.csv`
+- `tests/data/benchmark_hs1939_raw.csv`
 - `tests/data/benchmark_hs1939_reference.json`
 
 其中 `reference.json` 建议记录：
@@ -300,7 +325,7 @@ y6 ~~ y8
 
 建议新增：
 
-- `tests/data/benchmark_political_democracy.csv`
+- `tests/data/benchmark_political_democracy_raw.csv`
 - `tests/data/benchmark_political_democracy_reference.json`
 
 ---
@@ -395,6 +420,7 @@ y6 ~~ y8
 3. 提取日期；
 4. 参考语法；
 5. 是否做过参数对齐或标准化处理。
+6. 是否能确认 public domain；如果不能，应明确写为“公开可获取，但未确认 public domain”。
 
 ### 6.3 第三原则：不要在测试中依赖 GUI 软件
 
@@ -450,11 +476,22 @@ y6 ~~ y8
 如果下一步直接开始编码，建议第一批只交付：
 
 1. `tests/data/benchmark_hs1939.csv`
+   （当前已落地为 `tests/data/benchmark_hs1939_raw.csv`）
 2. `tests/data/benchmark_hs1939_reference.json`
 3. `tests/test_sem_benchmark_hs1939.py`
-4. `tests/data/benchmark_political_democracy.csv`
+4. `tests/data/benchmark_political_democracy_raw.csv`
 5. `tests/data/benchmark_political_democracy_reference.json`
 6. `tests/test_sem_benchmark_political_democracy.py`
+
+其中当前实际完成状态是：
+
+1. `HolzingerSwineford1939`：原始 CSV + provenance JSON + 首版自动 benchmark 测试已完成；
+2. `PoliticalDemocracy`：原始 CSV + provenance JSON + 首版自动 benchmark 测试已完成；
+3. `Boundary cases`：首版 warning / failure benchmark 已完成；
+4. 三组 benchmark 目前都仍处于 **prototype benchmark** 阶段：
+   - 已覆盖 Level A / Level B；
+   - 只有部分场景进入 Level C 的直接数值对照；
+   - 更严格的参数级对照与 residual covariance 对照仍待下一步补强。
 
 边界 benchmark 可以放到第二批。
 

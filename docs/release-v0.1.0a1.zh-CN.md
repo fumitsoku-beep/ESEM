@@ -98,6 +98,12 @@ from psysem.sem.estimation import optimize_ml_parameters
 2. 测试结果：`193 passed`；
 3. 新结构已通过仓库级回归验证。
 
+补充说明（发布准备后的当日进展）：
+
+1. 已补入第一批 SEM benchmark 原始 CSV 与 provenance JSON；
+2. 已新增 `HolzingerSwineford1939`、`PoliticalDemocracy` 与 boundary cases 三组 benchmark 测试；
+3. benchmark 当前仍定位为 prototype-level 基线验证，重点覆盖 Level A / Level B 与部分 warning 语义。
+
 ---
 
 ## 5. 发布清单
@@ -120,7 +126,8 @@ from psysem.sem.estimation import optimize_ml_parameters
 
 ### 5.3 发布后建议动作
 
-- [ ] 补第一批 benchmark 数据与测试
+- [x] 补第一批 benchmark 数据与测试
+- [x] 增加第一组 boundary warning benchmark
 - [ ] 开始整理更正式的结果表输出
 - [ ] 继续扩展 ESEM generator / judge / selector
 
