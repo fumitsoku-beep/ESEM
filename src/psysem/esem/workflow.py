@@ -5,17 +5,17 @@ from typing import Any, Mapping
 
 import pandas as pd
 
-from ..core import SEMModel
 from ..data import ESEMSpec, esem_spec_from_dict, validate_esem_spec
 from ..efa import EFAConfig, EFAResult, fit_efa
-from ..model import model_spec_from_esem_spec
 from ..preprocessing import (
     SUPPORTED_CORRELATION_METHODS,
     SUPPORTED_MISSING_STRATEGIES,
     normalize_correlation_method,
     normalize_missing_strategy,
 )
-from ..result import SEMResult
+from ..sem.core import SEMModel
+from ..sem.model import model_spec_from_esem_spec
+from ..sem.result import SEMResult
 from .contracts import (
     ESEMCandidateResult,
     ESEMJudgeResult,

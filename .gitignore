@@ -21,6 +21,7 @@ htmlcov/
 .tmp_*/
 .piptmp/
 pytest-cache-files-*/
+site/
 
 # IDE / OS files
 .idea/

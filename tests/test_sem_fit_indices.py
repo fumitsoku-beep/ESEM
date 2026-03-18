@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 
 from psysem import SEMModel, compute_basic_fit_indices
-from psysem.fit_indices import compute_fit_indices
+from psysem.sem.fit_indices import compute_fit_indices
 
 
 def test_compute_basic_fit_indices_keeps_placeholder_mode() -> None:
@@ -32,6 +32,10 @@ def test_compute_fit_indices_perfect_fit_values() -> None:
     )
     assert result.chi_square == 0.0
     assert result.df_model == 1
+    assert result.status == "ok"
+    assert result.failure_reason is None
+    assert result.n_available_indices == 6
+    assert result.n_unavailable_indices == 0
     assert result.indices["srmr"] == 0.0
     assert result.indices["rmsea"] == 0.0
     assert result.indices["cfi"] == 1.0
@@ -57,10 +61,29 @@ def test_compute_fit_indices_returns_nan_for_invalid_df_model() -> None:
         objective=0.0,
     )
     assert result.df_model == 0
+    assert result.status == "partial"
+    assert result.failure_reason == "invalid_model_degrees_of_freedom"
+    assert result.n_available_indices == 3
+    assert result.n_unavailable_indices == 3
     assert math.isnan(result.indices["cfi"])
     assert math.isnan(result.indices["tli"])
     assert math.isnan(result.indices["rmsea"])
     assert any("degrees of freedom are invalid" in warning for warning in result.warnings)
+
+
+def test_compute_fit_indices_marks_failed_when_covariance_inputs_are_missing() -> None:
+    result = compute_fit_indices(
+        sample_covariance=None,
+        implied_covariance=None,
+        n_obs=100,
+        n_free_parameters=3,
+    )
+    assert result.status == "failed"
+    assert result.failure_reason == "missing_covariance_input"
+    assert result.n_available_indices == 0
+    assert result.n_unavailable_indices == 6
+    assert all(math.isnan(value) for value in result.indices.values())
+    assert any("covariance is missing" in warning for warning in result.warnings)
 
 
 def test_sem_model_fit_populates_fit_indices_for_estimable_model() -> None:
@@ -81,6 +104,9 @@ def test_sem_model_fit_populates_fit_indices_for_estimable_model() -> None:
     assert not math.isnan(result.fit_indices["srmr"])
     assert not math.isnan(result.fit_indices["aic"])
     assert not math.isnan(result.fit_indices["bic"])
+    assert result.optimization_info["fit_status"] in {"ok", "partial"}
+    assert "n_fit_indices_available" in result.optimization_info
+    assert "n_fit_indices_unavailable" in result.optimization_info
     assert "chi_square" in result.optimization_info
     assert "df_model" in result.optimization_info
     assert "chi_square_baseline" in result.optimization_info

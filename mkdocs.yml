@@ -8,13 +8,20 @@ docs_dir: docs
 nav:
   - Home: index.md
   - Parameters (ZH): parameters.zh-CN.md
+  - Release:
+      - Release v0.1.0a1 (ZH): release-v0.1.0a1.zh-CN.md
   - Shared:
       - Preprocessing Module Extraction (ZH): preprocessing-module-extraction.zh-CN.md
+      - Current Testing Workflows (ZH): current-testing-workflows.zh-CN.md
   - EFA:
       - EFA Phase 1 (ZH): efa-phase1-implementation.zh-CN.md
       - EFA Method Expansion (ZH): efa-method-expansion-roadmap.zh-CN.md
   - SEM:
       - SEM Phase Plan (ZH): sem-phase-implementation.zh-CN.md
+      - SEM Next Steps and Benchmarks (ZH): sem-next-steps.zh-CN.md
+      - SEM Benchmark Test Plan (ZH): sem-benchmark-plan.zh-CN.md
+      - Pipeline Architecture and Current SEM Layout (ZH): pipeline-architecture-plan.zh-CN.md
+      - SEM Structure Refactor Plan (ZH): sem-structure-refactor-plan.zh-CN.md
   - ESEM:
       - ESEM Modular Workflow (ZH): esem-modular-workflow.zh-CN.md
       - ESEM MVP Path (ZH): esem-mvp-run.zh-CN.md

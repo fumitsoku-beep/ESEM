@@ -5,13 +5,13 @@ from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 
-from ..estimation import SEMFitConfig
+from ..sem.estimation import SEMFitConfig
 
 if TYPE_CHECKING:
     from ..data import ESEMSpec
     from ..efa import EFAResult
-    from ..model import ModelSpec
-    from ..result import SEMResult
+    from ..sem.model import ModelSpec
+    from ..sem.result import SEMResult
 
 
 @dataclass(frozen=True)

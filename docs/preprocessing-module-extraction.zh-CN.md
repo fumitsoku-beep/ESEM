@@ -521,12 +521,12 @@ data -> psysem.preprocessing.build_association_matrix(...)
 
 第一阶段基本可以不动：
 
-1. `src/psysem/core.py`
-2. `src/psysem/measurement/`
-3. `src/psysem/structural/`
-4. `src/psysem/estimation/`
-5. `src/psysem/fit_indices.py`
-6. `src/psysem/inference/`
+1. `src/psysem/sem/core.py`
+2. `src/psysem/sem/measurement/`
+3. `src/psysem/sem/structural/`
+4. `src/psysem/sem/estimation/`
+5. `src/psysem/sem/fit_indices.py`
+6. `src/psysem/sem/inference/`
 
 原因很简单：
 

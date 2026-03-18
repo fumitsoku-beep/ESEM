@@ -1,0 +1,102 @@
+{
+  "dataset_name": "HolzingerSwineford1939",
+  "local_csv": "tests/data/benchmark_hs1939_raw.csv",
+  "description": "Holzinger and Swineford dataset (9 variables) distributed with the lavaan R package.",
+  "retrieved_via": {
+    "package_name": "lavaan",
+    "package_version": "0.6-21",
+    "package_license": "GPL-2 | GPL-3",
+    "package_url": "https://cran.r-project.org/package=lavaan",
+    "documentation_url": "https://search.r-project.org/CRAN/refmans/lavaan/html/HolzingerSwineford1939.html"
+  },
+  "retrieval_date": "2026-03-16",
+  "row_count": 301,
+  "column_count": 15,
+  "columns": [
+    "id",
+    "sex",
+    "ageyr",
+    "agemo",
+    "school",
+    "grade",
+    "x1",
+    "x2",
+    "x3",
+    "x4",
+    "x5",
+    "x6",
+    "x7",
+    "x8",
+    "x9"
+  ],
+  "upstream_source_note": "Documented by lavaan as originally retrieved from http://web.missouri.edu/~kolenikovs/stata/hs-cfa.dta (link no longer active) and converted to an R dataset.",
+  "original_references": [
+    "Holzinger, K., & Swineford, F. (1939). A study in factor analysis: The stability of a bifactor solution. Supplementary Educational Monograph, no. 48. Chicago: University of Chicago Press.",
+    "Joreskog, K. G. (1969). A general approach to confirmatory maximum likelihood factor analysis. Psychometrika, 34, 183-202."
+  ],
+  "suggested_benchmark_model": "visual =~ 1*x1 + x2 + x3\ntextual =~ 1*x4 + x5 + x6\nspeed =~ 1*x7 + x8 + x9\nvisual ~~ visual + textual + speed\ntextual ~~ textual + speed\nspeed ~~ speed",
+  "reference_statistics": {
+    "n_obs": 301,
+    "df_model": 24,
+    "fit_indices": {
+      "chi_square": 85.306,
+      "cfi": 0.931,
+      "tli": 0.896,
+      "rmsea": 0.092,
+      "srmr": 0.065
+    },
+    "selected_loadings": {
+      "visual_x2": 0.554,
+      "visual_x3": 0.729,
+      "textual_x5": 1.113,
+      "textual_x6": 0.926,
+      "speed_x8": 1.18,
+      "speed_x9": 1.082
+    },
+    "latent_variances": {
+      "visual": 0.809,
+      "textual": 0.979,
+      "speed": 0.384
+    },
+    "latent_covariances": {
+      "visual~~textual": 0.408,
+      "visual~~speed": 0.262,
+      "textual~~speed": 0.173
+    },
+    "residual_variances": {
+      "x1": 0.549,
+      "x2": 1.134,
+      "x3": 0.844,
+      "x4": 0.371,
+      "x5": 0.446,
+      "x6": 0.356,
+      "x7": 0.799,
+      "x8": 0.488,
+      "x9": 0.566
+    },
+    "reference_source_note": "Reference fit statistics and selected loadings summarized from the lavaan CFA tutorial / commonly cited Holzinger-Swineford example values."
+  },
+  "comparison_policy": {
+    "stage": "phase1_prototype_benchmark_level_c_expanded",
+    "identification_alignment": "Use fixed marker loadings (1*x1, 1*x4, 1*x7) in the benchmark syntax to better align with the lavaan tutorial identification.",
+    "selected_loading_abs_tol": 0.15,
+    "speed_loading_abs_tol": 0.5,
+    "latent_covariance_abs_tol": 0.05,
+    "latent_variance_abs_tol": 0.05,
+    "residual_variance_abs_tol": 0.25,
+    "fit_index_abs_tol": 0.12,
+    "notes": [
+      "The current psysem SEM implementation is still a prototype and does not yet target full lavaan-level agreement on every fit statistic.",
+      "This benchmark now expands Level C checks to cover more loadings, latent variances/covariances, and all observed residual variances while keeping wider tolerances for the speed factor block.",
+      "HS1939 latent covariance alignment is now active through explicit fixed-marker benchmark syntax and measurement-only Phi support in implied covariance construction."
+    ]
+  },
+  "usage_in_repository": "SEM benchmark regression tests and reference comparisons.",
+  "copyright_and_reuse": {
+    "publicly_available": true,
+    "public_domain": false,
+    "public_domain_note": "Current upstream documentation does not establish that this dataset is in the public domain.",
+    "repo_distribution_note": "This repository stores a CSV copy for benchmark use together with provenance and citation metadata.",
+    "citation_recommended": true
+  }
+}

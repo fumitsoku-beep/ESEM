@@ -2,6 +2,8 @@
 
 本页是当前 `psysem` 文档入口，按 **EFA / SEM / ESEM** 三条主线整理。
 
+> 当前版本：`0.1.0a1`。SEM 直接模块入口已统一为 `psysem.sem.*`，顶层 `psysem` 继续保留稳定 public API。
+
 ## Current Flow Diagrams
 
 ### Standard ESEM step workflow
@@ -29,6 +31,7 @@
 ### Shared
 
 - [Shared Preprocessing Module Extraction (ZH)](preprocessing-module-extraction.zh-CN.md)
+- [Current Testing Workflows (ZH)](current-testing-workflows.zh-CN.md)
 
 ### EFA
 
@@ -38,11 +41,19 @@
 ### SEM
 
 - [SEM Phase Implementation (ZH)](sem-phase-implementation.zh-CN.md)
+- [SEM Next Steps and Benchmarks (ZH)](sem-next-steps.zh-CN.md)
+- [SEM Benchmark Test Plan (ZH)](sem-benchmark-plan.zh-CN.md)
+- [总管线架构与当前 SEM 子系统布局（ZH）](pipeline-architecture-plan.zh-CN.md)
+- [SEM Structure Refactor Plan (ZH)](sem-structure-refactor-plan.zh-CN.md)
+
+### Release
+
+- [v0.1.0a1 发布说明与发布清单（ZH）](release-v0.1.0a1.zh-CN.md)
 
 ### ESEM
 
-- [ESEM Modular Workflow Plan (ZH)](esem-modular-workflow.zh-CN.md)
-- [ESEM MVP Runnable Path (ZH)](esem-mvp-run.zh-CN.md)
+- [ESEM 模块化判断工作流实施文档（ZH）](esem-modular-workflow.zh-CN.md)
+- [ESEM 最小可跑路径（MVP，ZH）](esem-mvp-run.zh-CN.md)
 
 ### Research
 
@@ -55,6 +66,7 @@
 - `psysem.efa` 已具备诊断、因子数建议、候选评分与解释层基础能力
 - EFA 提取/旋转已扩展到 `minres`、`promax`、`oblimin`、`geomin`、`target`
 - `psysem` SEM 已具备 measurement/structural 参数映射、ML 原型优化、基础推断与基础拟合指标
+- SEM 当前代码主实现位于 `src/psysem/sem/`
 - ESEM 已具备最小可跑 workflow，可输出候选比较结果与最佳候选
 
 ## 当前最建议的下一步
